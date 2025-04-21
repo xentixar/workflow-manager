@@ -1,0 +1,31 @@
+{
+    "name": "xentixar/workflow-manager",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Xentixar\\WorkflowManager\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "xentixar",
+            "email": "xentixar@gmail.com",
+            "role": "Software Engineer"
+        }
+    ],
+    "keywords": [
+        "laravel",
+        "filament",
+        "workflow",
+        "manager",
+        "workflow-manager",
+        "workflow-manager-plugin",
+        "plugin"
+    ],
+    "require": {
+        "filament/support": "^3.0"
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
