@@ -2,7 +2,7 @@
 
 namespace Xentixar\WorkflowManager;
 
-use Filament\Support\Commands\InstallCommand;
+use Spatie\LaravelPackageTools\Commands\InstallCommand;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 
@@ -20,10 +20,12 @@ class WorkflowManagerServiceProvider extends PackageServiceProvider
                     ->publishConfigFile()
                     ->publishMigrations()
                     ->askToRunMigrations();
-            })->hasMigrations([
+            })
+            ->hasConfigFile()
+            ->hasMigrations([
                 'create_workflows_table',
                 'create_workflow_transitions_table',
-            ])->hasConfigFile();
+            ]);
     }
 
     public function boot(): void
