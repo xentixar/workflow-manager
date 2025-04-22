@@ -1,14 +1,14 @@
 <?php
 
-namespace Xentixar\WorkflowManager\Resources\WorkflowManagerResource\Pages;
+namespace Xentixar\WorkflowManager\Resources\WorkflowResource\Pages;
 
-use Xentixar\WorkflowManager\Resources\WorkflowManagerResource;
+use Xentixar\WorkflowManager\Resources\WorkflowResource;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 
-class EditWorkflowManager extends EditRecord
+class EditWorkflow extends EditRecord
 {
-    protected static string $resource = WorkflowManagerResource::class;
+    protected static string $resource = WorkflowResource::class;
 
     protected static ?string $navigationLabel = 'Edit';
 

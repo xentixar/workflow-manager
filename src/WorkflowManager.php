@@ -4,7 +4,7 @@ namespace Xentixar\WorkflowManager;
 
 use Filament\Contracts\Plugin;
 use Filament\Panel;
-use Xentixar\WorkflowManager\Resources\WorkflowManagerResource;
+use Xentixar\WorkflowManager\Resources\WorkflowResource;
 
 class WorkflowManager implements Plugin
 {
@@ -21,12 +21,12 @@ class WorkflowManager implements Plugin
     public function register(Panel $panel): void
     {
         $panel->resources([
-            WorkflowManagerResource::class,
+            WorkflowResource::class,
         ]);
     }
 
     public function boot(Panel $panel): void
     {
-        
+        //
     }
 }

@@ -4,7 +4,7 @@ namespace Xentixar\WorkflowManager\Resources;
 
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
-use Xentixar\WorkflowManager\Resources\WorkflowManagerResource\Pages;
+use Xentixar\WorkflowManager\Resources\WorkflowResource\Pages;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Pages\SubNavigationPosition;
@@ -16,7 +16,7 @@ use Filament\Tables\Table;
 use Xentixar\WorkflowManager\Models\Workflow;
 use Xentixar\WorkflowManager\Support\Helper;
 
-class WorkflowManagerResource extends Resource
+class WorkflowResource extends Resource
 {
     protected static ?string $model = Workflow::class;
 
@@ -124,7 +124,7 @@ class WorkflowManagerResource extends Resource
     public static function getRecordSubNavigation(Page $page): array
     {
         return $page->generateNavigationItems([
-            'edit' => Pages\EditWorkflowManager::class,
+            'edit' => Pages\EditWorkflow::class,
             'transitions' => Pages\ManageWorkflowTransitions::class,
         ]);
     }
@@ -132,9 +132,9 @@ class WorkflowManagerResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListWorkflowManagers::route('/'),
-            'create' => Pages\CreateWorkflowManager::route('/create'),
-            'edit' => Pages\EditWorkflowManager::route('/{record}/edit'),
+            'index' => Pages\ListWorkflows::route('/'),
+            'create' => Pages\CreateWorkflow::route('/create'),
+            'edit' => Pages\EditWorkflow::route('/{record}/edit'),
             'transitions' => Pages\ManageWorkflowTransitions::route('/{record}/transitions'),
         ];
     }

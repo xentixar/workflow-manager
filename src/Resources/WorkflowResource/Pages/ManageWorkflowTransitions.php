@@ -1,6 +1,6 @@
 <?php
 
-namespace Xentixar\WorkflowManager\Resources\WorkflowManagerResource\Pages;
+namespace Xentixar\WorkflowManager\Resources\WorkflowResource\Pages;
 
 use Closure;
 use Filament\Forms\Components\Select;
@@ -15,11 +15,11 @@ use Filament\Tables\Actions\DeleteBulkAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Xentixar\WorkflowManager\Models\WorkflowTransition;
-use Xentixar\WorkflowManager\Resources\WorkflowManagerResource;
+use Xentixar\WorkflowManager\Resources\WorkflowResource;
 
 class ManageWorkflowTransitions extends ManageRelatedRecords
 {
-    protected static string $resource = WorkflowManagerResource::class;
+    protected static string $resource = WorkflowResource::class;
 
     protected static string $relationship = 'transitions';
 

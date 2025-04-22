@@ -86,6 +86,28 @@ class WorkflowPolicy
     }
 
     /**
+     * Determine whether the user can reorder the model.
+     */
+    public function reorder(User $user): bool
+    {
+        if (!$this->isPolicyEnabled()) {
+            return true;
+        }
+        return $user->can(__('workflow-manager::workflow-manager.permissions.reorder'));
+    }
+
+    /**
+     * Determine whether the user can replicate the model.
+     */
+    public function replicate(User $user): bool
+    {
+        if (!$this->isPolicyEnabled()) {
+            return true;
+        }
+        return $user->can(__('workflow-manager::workflow-manager.permissions.replicate'));
+    }
+
+    /**
      * Check if the policy is enabled.
      */
     private function isPolicyEnabled(): bool

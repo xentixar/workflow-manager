@@ -21,12 +21,14 @@ return [
      * These are the permissions that are used in the policy.
      */
     'permissions' => [
-        'view_any' => 'view_any_workflow::manager',
-        'view' => 'view_workflow::manager',
-        'create' => 'create_workflow::manager',
-        'update' => 'update_workflow::manager',
-        'delete' => 'delete_workflow::manager',
-        'restore' => 'restore_workflow::manager',
-        'force_delete' => 'force_delete_workflow::manager',
+        'view_any' => 'view_any_workflow',
+        'view' => 'view_workflow',
+        'create' => 'create_workflow',
+        'update' => 'update_workflow',
+        'delete' => 'delete_workflow',
+        'restore' => 'restore_workflow',
+        'force_delete' => 'force_delete_workflow',
+        'reorder' => 'reorder_workflow',
+        'replicate' => 'replicate_workflow',
     ],
 ];
