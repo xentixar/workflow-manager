@@ -2,15 +2,26 @@
 
 namespace Xentixar\WorkflowManager\Traits;
 
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Xentixar\WorkflowManager\Models\Workflow;
 
 trait HasWorkflows
 {
-    public function workflows()
+    /**
+     * Get the workflows for the model.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function workflows(): HasMany
     {
-        return Workflow::query()->where('model_class', get_class($this))->get();
+        return $this->hasMany(Workflow::class, 'model_class', get_class($this));
     }
 
+    /**
+     * Get the available states for the workflow.
+     *
+     * @return array
+     */
     public function getStates(): array
     {
         return [];
