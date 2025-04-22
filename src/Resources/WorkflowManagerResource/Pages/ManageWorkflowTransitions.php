@@ -37,9 +37,15 @@ class ManageWorkflowTransitions extends ManageRelatedRecords
                     ->badge(true)
                     ->color(fn($state) => $state !== '*' ? 'success' : 'info')
                     ->default('*')
+                    ->formatStateUsing(function ($state) {
+                        return ($this->getOwnerRecord()->model_class)::getStates()[$state] ?? $state;
+                    })
                     ->label('From State'),
                 TextColumn::make('state')
                     ->badge()
+                    ->formatStateUsing(function ($state) {
+                        return ($this->getOwnerRecord()->model_class)::getStates()[$state] ?? $state;
+                    })
                     ->color('primary')
                     ->searchable()
                     ->label('To State'),
@@ -77,7 +83,7 @@ class ManageWorkflowTransitions extends ManageRelatedRecords
                         $states = [];
 
                         while ($record) {
-                            $states[] = $record->state === '*' ? 'Any' : $record->state;
+                            $states[] = ($this->getOwnerRecord()->model_class)::getStates()[$record->state] ?? $record->state;
                             $record = $record->parent;
                         }
 
@@ -90,12 +96,7 @@ class ManageWorkflowTransitions extends ManageRelatedRecords
 
                 Select::make('state')
                     ->label('To State')
-                    ->options(function () {
-                        return array_combine(
-                            $states = ($this->getOwnerRecord()->model_class)::getStates(),
-                            $states
-                        );
-                    })
+                    ->options(($this->getOwnerRecord()->model_class)::getStates())
                     ->searchable()
                     ->required()
                     ->rules([
@@ -126,7 +127,7 @@ class ManageWorkflowTransitions extends ManageRelatedRecords
                                 ->where('parent_id', $parentId)
                                 ->where('state', $value)
                                 ->exists();
-                                
+
                             if ($exists) {
                                 $fail('This transition already exists.');
                             }

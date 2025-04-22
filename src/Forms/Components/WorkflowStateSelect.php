@@ -32,10 +32,7 @@ class WorkflowStateSelect extends Select
                     throw new \InvalidArgumentException('Workflow model is not set.');
                 }
 
-                $states = $model::getStates();
-                $states = array_combine($states, $states);
-
-                return $states;
+                return $model::getStates();
             })
             ->disableOptionWhen(function (string $value, $get, ?Model $record) use ($name, $static) {
                 $model = $static->getworkflowModel();
@@ -71,14 +68,6 @@ class WorkflowStateSelect extends Select
                     ->where('workflow_id', $workflow->id)
                     ->where('state', $currentState)
                     ->get();
-
-                $childrenStates = $currentTransitionStates
-                    ->flatMap(function ($state) {
-                        return $state->children?->pluck('state') ?? [];
-                    })
-                    ->unique()
-                    ->values()
-                    ->toArray();
 
                 if (config('workflow-manager.include_parent')) {
                     $parentStates = $currentTransitionStates

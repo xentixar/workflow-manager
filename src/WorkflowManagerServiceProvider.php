@@ -21,6 +21,7 @@ class WorkflowManagerServiceProvider extends PackageServiceProvider
                     ->publishMigrations()
                     ->askToRunMigrations();
             })
+            ->hasTranslations()
             ->hasConfigFile()
             ->hasMigrations([
                 'create_workflows_table',

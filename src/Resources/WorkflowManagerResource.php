@@ -20,9 +20,25 @@ class WorkflowManagerResource extends Resource
 {
     protected static ?string $model = Workflow::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-arrows-right-left';
+    public static function getNavigationIcon(): string
+    {
+        return __('workflow-manager::workflow-manager.navigation.icon');
+    }
 
-    protected static ?string $navigationGroup = 'Settings';
+    public static function getNavigationGroup(): ?string
+    {
+        return __('workflow-manager::workflow-manager.navigation.group');
+    }
+
+    public static function getNavigationSort(): ?int
+    {
+        return __('workflow-manager::workflow-manager.navigation.sort');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('workflow-manager::workflow-manager.navigation.label');
+    }
 
     protected static SubNavigationPosition $subNavigationPosition = SubNavigationPosition::Top;
 
@@ -71,6 +87,7 @@ class WorkflowManagerResource extends Resource
                     ->label('Model'),
                 TextColumn::make('role')
                     ->badge()
+                    ->formatStateUsing(fn($state) => config('workflow-manager.roles')[$state] ?? $state)
                     ->color('success')
                     ->searchable()
                     ->label('Role'),
