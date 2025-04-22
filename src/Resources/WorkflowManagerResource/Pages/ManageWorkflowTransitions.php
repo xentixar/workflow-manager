@@ -7,6 +7,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Resources\Pages\ManageRelatedRecords;
+use Filament\Tables\Actions\Action;
 use Filament\Tables\Actions\BulkActionGroup;
 use Filament\Tables\Actions\CreateAction;
 use Filament\Tables\Actions\DeleteAction;
@@ -54,6 +55,16 @@ class ManageWorkflowTransitions extends ManageRelatedRecords
                 //
             ])
             ->headerActions([
+                Action::make('view')
+                    ->label('View Workflow')
+                    ->icon('heroicon-o-eye')
+                    ->color('success')
+                    ->modal()
+                    ->modalSubmitAction(false)
+                    ->modalHeading('View Workflow')
+                    ->modalContent(fn() => view('workflow-manager::components.flowchart-diagram', [
+                        'workflow' => $this->getOwnerRecord(),
+                    ])),
                 CreateAction::make()
                     ->label('Add Transition')
                     ->icon('heroicon-o-plus')

@@ -2,6 +2,8 @@
 
 namespace Xentixar\WorkflowManager;
 
+use Filament\Support\Assets\Js;
+use Filament\Support\Facades\FilamentAsset;
 use Spatie\LaravelPackageTools\Commands\InstallCommand;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
@@ -35,6 +37,8 @@ class WorkflowManagerServiceProvider extends PackageServiceProvider
 
         $this->loadMigrationsFrom(__DIR__ . '/../database/migrations');
 
+        $this->loadViewsFrom(__DIR__.'/../resources/views', 'workflow-manager');
+
         $this->publishes([
             __DIR__ . '/../config/workflow-manager.php' => config_path('workflow-manager.php'),
         ], 'config');
@@ -47,5 +51,9 @@ class WorkflowManagerServiceProvider extends PackageServiceProvider
         $this->publishes([
             __DIR__ . '/../resources/lang' => resource_path('lang/vendor/workflow-manager'),
         ], 'translations');
+
+        FilamentAsset::register([
+            Js::make('mermaid', __DIR__ . '/../resources/js/mermaid.js'),
+        ]);
     }
 }
