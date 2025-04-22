@@ -10,6 +10,8 @@ class EditWorkflowManager extends EditRecord
 {
     protected static string $resource = WorkflowManagerResource::class;
 
+    protected static ?string $navigationLabel = 'Edit';
+
     protected function getHeaderActions(): array
     {
         return [

@@ -9,4 +9,11 @@ use Filament\Resources\Pages\CreateRecord;
 class CreateWorkflowManager extends CreateRecord
 {
     protected static string $resource = WorkflowManagerResource::class;
+
+    protected function getRedirectUrl(): string
+    {
+        return WorkflowManagerResource::getUrl('transitions', [
+            'record' => $this->record,
+        ]);
+    }
 }

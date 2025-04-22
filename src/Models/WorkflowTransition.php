@@ -13,8 +13,8 @@ class WorkflowTransition extends Model
      */
     protected $fillable = [
         'workflow_id',
-        'from_state',
-        'to_state',
+        'state',
+        'parent_id',
     ];
 
     /**
@@ -23,5 +23,21 @@ class WorkflowTransition extends Model
     public function workflow()
     {
         return $this->belongsTo(Workflow::class);
+    }
+
+    /**
+     * Get the parent transition of the current transition.
+     */
+    public function parent()
+    {
+        return $this->belongsTo(WorkflowTransition::class, 'parent_id');
+    }
+
+    /**
+     * Get the child transitions of the current transition.
+     */
+    public function children()
+    {
+        return $this->hasMany(WorkflowTransition::class, 'parent_id');
     }
 }

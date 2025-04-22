@@ -3,6 +3,7 @@
 namespace Xentixar\WorkflowManager\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Workflow extends Model
 {
@@ -16,4 +17,12 @@ class Workflow extends Model
         'workflow_name',
         'role'
     ];
+
+    /**
+     * Get the transitions for the workflow.
+     */
+    public function transitions():HasMany
+    {
+        return $this->hasMany(WorkflowTransition::class);
+    }
 }
