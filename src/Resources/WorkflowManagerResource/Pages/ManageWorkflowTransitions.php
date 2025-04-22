@@ -84,6 +84,7 @@ class ManageWorkflowTransitions extends ManageRelatedRecords
 
                         while ($record) {
                             $states[] = ($this->getOwnerRecord()->model_class)::getStates()[$record->state] ?? $record->state;
+                            $record->loadMissing('parent');
                             $record = $record->parent;
                         }
 

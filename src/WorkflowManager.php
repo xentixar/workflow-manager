@@ -6,7 +6,7 @@ use Filament\Contracts\Plugin;
 use Filament\Panel;
 use Xentixar\WorkflowManager\Resources\WorkflowManagerResource;
 
-class Workflowmanager implements Plugin
+class WorkflowManager implements Plugin
 {
     public static function make()
     {

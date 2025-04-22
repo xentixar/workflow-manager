@@ -22,7 +22,7 @@ trait HasWorkflows
      *
      * @return array
      */
-    public function getStates(): array
+    public static function getStates(): array
     {
         return [];
     }
