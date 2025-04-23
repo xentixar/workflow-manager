@@ -2,6 +2,29 @@
 
 All notable changes to the Workflow Manager package will be documented in this file.
 
+## v1.0.1 - 2025-04-23
+
+### Database Schema Changes
+- Refactored workflow states into a dedicated `workflow_states` table for better state management
+- Modified `workflow_transitions` table to use direct state references via foreign keys
+- Improved state transition referencing with `from_state_id` and `to_state_id` fields
+
+### Added
+- New `WorkflowState` model to handle state management independently
+- Added "States" management page in the admin interface
+- Auto-population of workflow states when a new workflow is created
+- Enhanced relationship methods between workflows, states, and transitions
+
+### Changed
+- Updated WorkflowStateSelect component to work with the new database schema
+- Improved flowchart and transition diagrams to reflect the new state management
+- Optimized state transition validation with more robust rule checking
+- Enhanced diagram rendering with better labels and state representation
+
+### Fixed
+- Fixed issue with state transitions not respecting proper parent-child relationships
+- Improved error handling when workflow states are used in transitions
+
 ## v1.0.0 - 2025-04-22
 
 ### Initial Release 🚀
