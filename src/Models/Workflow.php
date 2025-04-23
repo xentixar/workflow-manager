@@ -19,6 +19,14 @@ class Workflow extends Model
     ];
 
     /**
+     * Get the states for the workflow.
+     */
+    public function states():HasMany
+    {
+        return $this->hasMany(WorkflowState::class);
+    }
+
+    /**
      * Get the transitions for the workflow.
      */
     public function transitions():HasMany

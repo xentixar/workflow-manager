@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Xentixar\WorkflowManager\Contracts\Workflows;
 use Xentixar\WorkflowManager\Models\Workflow;
 use Xentixar\WorkflowManager\Models\WorkflowTransition;
+use Xentixar\WorkflowManager\Models\WorkflowState;
 
 class WorkflowStateSelect extends Select
 {
@@ -26,73 +27,82 @@ class WorkflowStateSelect extends Select
 
         return $static
             ->options(function () use ($static) {
-                $model = $static->getworkflowModel();
+                $model = $static->getWorkflowModel();
+                $role = $static->getRole();
 
-                if ($model === null) {
-                    throw new \InvalidArgumentException('Workflow model is not set.');
+                if ($model === null || $role === null) {
+                    throw new \InvalidArgumentException('Workflow model or role is not set.');
                 }
 
-                return $model::getStates();
+                $workflow = Workflow::query()
+                    ->where('model_class', $model)
+                    ->where('role', $role)
+                    ->with('states')
+                    ->first();
+
+                if (!$workflow) {
+                    return [];
+                }
+
+                return $workflow->states->pluck('label', 'state')->toArray();
             })
             ->disableOptionWhen(function (string $value, $get, ?Model $record) use ($name, $static) {
-                $model = $static->getworkflowModel();
+                $model = $static->getWorkflowModel();
                 $role = $static->getRole();
+
+                if ($model === null || $role === null) {
+                    throw new \InvalidArgumentException('Workflow model is not set.');
+                }
+                
 
                 $workflow = Workflow::query()
                     ->where('model_class', $model)
                     ->where('role', $role)
                     ->first();
 
-                if ($workflow === null) {
-                    throw new \InvalidArgumentException('Workflow not found.');
-                }
-
-                if ($model === null) {
-                    throw new \InvalidArgumentException('Workflow model is not set.');
-                }
-
-                if ($record === null) {
+                if (!$workflow || !$record) {
                     return false;
                 }
 
-                $currentState = $record->getAttribute($name);
-
-                if (is_object($currentState) && enum_exists(get_class($currentState))) {
-                    $currentState = $currentState->value;
+                $currentStateValue = $record->getAttribute($name);
+                if (is_object($currentStateValue) && enum_exists(get_class($currentStateValue))) {
+                    $currentStateValue = $currentStateValue->value;
                 }
 
-                $childrenStates = [];
-                $parentStates = [];
-
-                $currentTransitionStates = WorkflowTransition::query()
+                $currentState = WorkflowState::query()
                     ->where('workflow_id', $workflow->id)
-                    ->where('state', $currentState)
-                    ->get();
+                    ->where('state', $currentStateValue)
+                    ->first();
 
+                if (!$currentState) {
+                    return true;
+                }
+
+                $acceptedStateIds = [$currentState->id];
+
+                $children = WorkflowTransition::query()
+                    ->where('workflow_id', $workflow->id)
+                    ->where('from_state_id', $currentState->id)
+                    ->pluck('to_state_id')
+                    ->toArray();
+
+                $parents = [];
                 if (config('workflow-manager.include_parent')) {
-                    $parentStates = $currentTransitionStates
-                        ->flatMap(function ($state) {
-                            return $state->parent ? [$state->parent->state] : [];
-                        })
-                        ->unique()
-                        ->values()
+                    $parents = WorkflowTransition::query()
+                        ->where('workflow_id', $workflow->id)
+                        ->where('to_state_id', $currentState->id)
+                        ->pluck('from_state_id')
                         ->toArray();
                 }
 
-                $childrenStates = $currentTransitionStates
-                    ->flatMap(function ($parentState) {
-                        return $parentState->children?->pluck('state') ?? [];
-                    })
-                    ->unique()
-                    ->values()
-                    ->toArray();
+                $acceptedStateIds = array_merge($acceptedStateIds, $children, $parents);
 
-                $childrenStates = array_combine($childrenStates, $childrenStates);
-                $parentStates = array_combine($parentStates, $parentStates);
+                $targetState = WorkflowState::query()
+                    ->where('workflow_id', $workflow->id)
+                    ->where('state', $value)
+                    ->first();
 
-                $acceptedStates = array_merge($childrenStates, $parentStates, [$currentState => $currentState]);
-
-                return !in_array($value, $acceptedStates);
+                return !$targetState || !in_array($targetState->id, $acceptedStateIds);
             });
     }
 
@@ -101,8 +111,10 @@ class WorkflowStateSelect extends Select
         if (!((new $class) instanceof Workflows)) {
             throw new \InvalidArgumentException('The class must implement the Workflows interface.');
         }
+
         $this->workflowModel = $class;
         $this->role = $role;
+
         return $this;
     }
 

@@ -13,10 +13,9 @@ return new class extends Migration
     {
         Schema::create('workflow_transitions', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('from_state_id')->nullable()->constrained('workflow_states')->cascadeOnDelete();
+            $table->foreignId('to_state_id')->constrained('workflow_states')->cascadeOnDelete();
             $table->foreignId('workflow_id')->constrained('workflows')->cascadeOnDelete();
-            $table->foreignId('parent_id')->nullable()->constrained('workflow_transitions')->cascadeOnDelete();
-            $table->string('state');
-            $table->unique(['workflow_id', 'parent_id', 'state']);
             $table->timestamps();
         });
     }

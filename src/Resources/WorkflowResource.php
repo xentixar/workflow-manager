@@ -125,6 +125,7 @@ class WorkflowResource extends Resource
     {
         return $page->generateNavigationItems([
             'edit' => Pages\EditWorkflow::class,
+            'states' => Pages\ManageWorkflowStates::class,
             'transitions' => Pages\ManageWorkflowTransitions::class,
         ]);
     }
@@ -136,6 +137,7 @@ class WorkflowResource extends Resource
             'create' => Pages\CreateWorkflow::route('/create'),
             'edit' => Pages\EditWorkflow::route('/{record}/edit'),
             'transitions' => Pages\ManageWorkflowTransitions::route('/{record}/transitions'),
+            'states' => Pages\ManageWorkflowStates::route('/{record}/states'),
         ];
     }
 }

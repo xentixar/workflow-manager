@@ -1,39 +1,42 @@
 @php
-    $modelClass = $workflow->model_class;
-    $states = $modelClass::getStates();
-
-    $transitions = $workflow->transitions()->with('parent')->get();
+    $states = $workflow->states()->get()->keyBy('id');
+    
+    $transitions = $workflow->transitions()->with(['fromState', 'toState'])->get();
 
     $nodeDefinitions = [];
     $transitionDefinitions = [];
 
     foreach ($transitions as $transition) {
-        $toState = $states[$transition->state] ?? $transition->state;
-        $toStateKey = str_replace([' ', '-'], '_', $transition->state);
+        $toState = $transition->toState;
+        $fromState = $transition->fromState;
 
-        if (!in_array($toStateKey, $nodeDefinitions)) {
-            $nodeDefinitions[] = $toStateKey;
-        }
+        if ($toState) {
+            $toStateKey = str_replace([' ', '-'], '_', $toState->state);
+            $toStateLabel = $toState->label ?? $toState->state;
 
-        if ($transition->parent) {
-            $fromState = $states[$transition->parent->state] ?? $transition->parent->state;
-            $fromStateKey = str_replace([' ', '-'], '_', $transition->parent->state);
-
-            if (!in_array($fromStateKey, $nodeDefinitions)) {
-                $nodeDefinitions[] = $fromStateKey;
+            if (!array_key_exists($toStateKey, $nodeDefinitions)) {
+                $nodeDefinitions[$toStateKey] = $toStateLabel;
             }
 
-            $transitionDefinitions[] = "$fromStateKey --> $toStateKey: \"$fromState to $toState\"";
-        } else {
-            $transitionDefinitions[] = "[*] --> $toStateKey: \"Initial State\"";
+            if ($fromState) {
+                $fromStateKey = str_replace([' ', '-'], '_', $fromState->state);
+                $fromStateLabel = $fromState->label ?? $fromState->state;
+
+                if (!array_key_exists($fromStateKey, $nodeDefinitions)) {
+                    $nodeDefinitions[$fromStateKey] = $fromStateLabel;
+                }
+
+                $transitionDefinitions[] = "$fromStateKey --> $toStateKey: \"$fromStateLabel to $toStateLabel\"";
+            } else {
+                $transitionDefinitions[] = "[*] --> $toStateKey: \"Initial State\"";
+            }
         }
     }
 
     $mermaidCode = "stateDiagram-v2\n";
-    foreach ($nodeDefinitions as $node) {
-        $mermaidCode .= $node . ': ' . str_replace('state_', '', str_replace('_', ' ', $node)) . "\n";
+    foreach ($nodeDefinitions as $key => $label) {
+        $mermaidCode .= $key . ': ' . addslashes($label) . "\n";
     }
-
     foreach ($transitionDefinitions as $transition) {
         $mermaidCode .= $transition . "\n";
     }

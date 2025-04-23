@@ -1,24 +1,28 @@
 @php
-    $modelClass = $workflow->model_class;
-    $states = $modelClass::getStates();
-    $transitions = $workflow->transitions()->with('parent')->get();
+    $states = $workflow->states()->get()->keyBy('id');
+    $transitions = $workflow->transitions()->with(['fromState', 'toState'])->get();
 
     $nodeLabels = [];
     $transitionLines = [];
 
     foreach ($transitions as $transition) {
-        $toKey = 'state_' . str_replace([' ', '-'], '_', $transition->state);
-        $toLabel = $states[$transition->state] ?? $transition->state;
-        $nodeLabels[$toKey] = $toLabel;
+        $toState = $transition->toState;
+        $fromState = $transition->fromState;
 
-        if ($transition->parent) {
-            $fromKey = 'state_' . str_replace([' ', '-'], '_', $transition->parent->state);
-            $fromLabel = $states[$transition->parent->state] ?? $transition->parent->state;
-            $nodeLabels[$fromKey] = $fromLabel;
+        if ($toState) {
+            $toKey = 'state_' . str_replace([' ', '-'], '_', $toState->state);
+            $toLabel = $toState->label ?? $toState->state;
+            $nodeLabels[$toKey] = $toLabel;
 
-            $transitionLines[] = $fromKey . ' --> ' . $toKey;
-        } else {
-            $transitionLines[] = 'start((Start)) --> ' . $toKey;
+            if ($fromState) {
+                $fromKey = 'state_' . str_replace([' ', '-'], '_', $fromState->state);
+                $fromLabel = $fromState->label ?? $fromState->state;
+                $nodeLabels[$fromKey] = $fromLabel;
+
+                $transitionLines[] = $fromKey . ' --> ' . $toKey;
+            } else {
+                $transitionLines[] = 'start((Start)) --> ' . $toKey;
+            }
         }
     }
 
@@ -31,7 +35,6 @@
         $mermaidCode .= $line . "\n";
     }
 @endphp
-
 
 <div 
     x-data="{

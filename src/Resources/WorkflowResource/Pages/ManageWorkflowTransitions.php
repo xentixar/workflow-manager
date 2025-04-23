@@ -23,8 +23,6 @@ class ManageWorkflowTransitions extends ManageRelatedRecords
 
     protected static string $relationship = 'transitions';
 
-    protected static ?string $recordTitleAttribute = 'state';
-
     protected static ?string $title = 'Manage Transitions';
 
     protected static ?string $navigationIcon = 'heroicon-o-arrow-right-start-on-rectangle';
@@ -33,20 +31,14 @@ class ManageWorkflowTransitions extends ManageRelatedRecords
     {
         return $table
             ->columns([
-                TextColumn::make('parent.state')
+                TextColumn::make('fromState.label')
                     ->searchable()
                     ->badge(true)
                     ->color(fn($state) => $state !== '*' ? 'success' : 'info')
                     ->default('*')
-                    ->formatStateUsing(function ($state) {
-                        return ($this->getOwnerRecord()->model_class)::getStates()[$state] ?? $state;
-                    })
                     ->label('From State'),
-                TextColumn::make('state')
+                TextColumn::make('toState.label')
                     ->badge()
-                    ->formatStateUsing(function ($state) {
-                        return ($this->getOwnerRecord()->model_class)::getStates()[$state] ?? $state;
-                    })
                     ->color('primary')
                     ->searchable()
                     ->label('To State'),
@@ -86,58 +78,40 @@ class ManageWorkflowTransitions extends ManageRelatedRecords
     {
         return $form
             ->schema([
-                Select::make('parent_id')
-                    ->label('Parent State')
+                Select::make('from_state_id')
+                    ->label('From State')
+                    ->options($this->getOwnerRecord()->states->pluck('label', 'id'))
                     ->placeholder('Select parent state')
-                    ->relationship('parent', 'state')
-                    ->getOptionLabelFromRecordUsing(function ($record) {
-                        $states = [];
-
-                        while ($record) {
-                            $states[] = ($this->getOwnerRecord()->model_class)::getStates()[$record->state] ?? $record->state;
-                            $record->loadMissing('parent');
-                            $record = $record->parent;
-                        }
-
-                        return implode(' -> ', array_reverse($states));
-                    })
                     ->searchable()
                     ->preload()
                     ->hint('Don\'t select anything if this is the first state')
                     ->live(),
 
-                Select::make('state')
+                Select::make('to_state_id')
                     ->label('To State')
-                    ->options(($this->getOwnerRecord()->model_class)::getStates())
+                    ->options($this->getOwnerRecord()->states->pluck('label', 'id'))
                     ->searchable()
                     ->required()
                     ->rules([
-                        fn(Get $get, string $operation): Closure => function (string $attribute, $value, Closure $fail) use ($get, $operation) {
-                            $parentId = $get('parent_id') ?? null;
+                        fn(Get $get): Closure => function (string $attribute, $value, Closure $fail) use ($get) {
+                            $fromStateId = $get('from_state_id') ?? null;
+                            $toStateId = $value;
+                            $workflow = $this->getOwnerRecord();
 
-                            if ($parentId !== null) {
-                                $parentState = WorkflowTransition::query()
-                                    ->where('id', $parentId)
-                                    ->value('state');
-
-                                if ($parentState === $value) {
-                                    $fail('A state cannot have a transition to itself.');
-                                }
+                            if ($fromStateId !== null && $fromStateId == $toStateId) {
+                                $fail('A state cannot transition to itself.');
                             }
 
-                            if ($parentId === null) {
-                                $rootExists = $this->getOwnerRecord()->transitions()
-                                    ->whereNull('parent_id')
-                                    ->exists();
-
+                            if ($fromStateId === null) {
+                                $rootExists = $workflow->transitions()->whereNull('from_state_id')->exists();
                                 if ($rootExists) {
-                                    $fail('Only one root state is allowed.');
+                                    $fail('Only one root transition is allowed.');
                                 }
                             }
 
-                            $exists = $this->getOwnerRecord()->transitions()
-                                ->where('parent_id', $parentId)
-                                ->where('state', $value)
+                            $exists = $workflow->transitions()
+                                ->where('from_state_id', $fromStateId)
+                                ->where('to_state_id', $toStateId)
                                 ->exists();
 
                             if ($exists) {
@@ -145,6 +119,7 @@ class ManageWorkflowTransitions extends ManageRelatedRecords
                             }
                         },
                     ])
+
             ])->columns(1);
     }
 }
