@@ -2,14 +2,15 @@
 
 namespace Xentixar\WorkflowManager\Resources\WorkflowResource\Pages;
 
+use BackedEnum;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\CreateAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Form;
 use Filament\Resources\Pages\ManageRelatedRecords;
-use Filament\Tables\Actions\BulkActionGroup;
-use Filament\Tables\Actions\CreateAction;
-use Filament\Tables\Actions\DeleteAction;
-use Filament\Tables\Actions\DeleteBulkAction;
-use Filament\Tables\Actions\EditAction;
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Xentixar\WorkflowManager\Resources\WorkflowResource;
@@ -24,7 +25,7 @@ class ManageWorkflowStates extends ManageRelatedRecords
 
     protected static string $resource = WorkflowResource::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-group';
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-rectangle-group';
 
     public function table(Table $table): Table
     {
@@ -45,21 +46,21 @@ class ManageWorkflowStates extends ManageRelatedRecords
                     ->icon('heroicon-o-plus')
                     ->createAnother(false)
             ])
-            ->actions([
+            ->recordActions([
                 EditAction::make(),
                 DeleteAction::make()
             ])
-            ->bulkActions([
+            ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ])
             ]);
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $form): Schema
     {
         return $form
-            ->schema([
+            ->components([
                 TextInput::make('state')
                     ->unique(
                         modifyRuleUsing: fn($rule) => $rule->where('workflow_id', $this->getOwnerRecord()->id),

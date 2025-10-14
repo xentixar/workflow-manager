@@ -12,7 +12,7 @@ use Xentixar\WorkflowManager\Models\WorkflowState;
 
 class WorkflowStateSelect extends Select
 {
-    protected bool|Closure $isSearchable = true;
+    protected bool|Closure|null $isSearchable = true;
 
     protected bool|Closure $isPreloaded = true;
 
@@ -20,7 +20,7 @@ class WorkflowStateSelect extends Select
 
     protected ?string $role = null;
 
-    public static function make(string $name = 'status'): static
+    public static function make(?string $name = 'status'): static
     {
         $static = parent::make($name)
             ->label('Status');

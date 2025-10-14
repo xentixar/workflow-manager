@@ -2,19 +2,19 @@
 
 namespace Xentixar\WorkflowManager\Resources\WorkflowResource\Pages;
 
+use BackedEnum;
 use Closure;
+use Filament\Actions\Action;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\CreateAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Form;
-use Filament\Forms\Get;
 use Filament\Resources\Pages\ManageRelatedRecords;
-use Filament\Tables\Actions\Action;
-use Filament\Tables\Actions\BulkActionGroup;
-use Filament\Tables\Actions\CreateAction;
-use Filament\Tables\Actions\DeleteAction;
-use Filament\Tables\Actions\DeleteBulkAction;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Xentixar\WorkflowManager\Models\WorkflowTransition;
 use Xentixar\WorkflowManager\Resources\WorkflowResource;
 
 class ManageWorkflowTransitions extends ManageRelatedRecords
@@ -25,7 +25,7 @@ class ManageWorkflowTransitions extends ManageRelatedRecords
 
     protected static ?string $title = 'Manage Transitions';
 
-    protected static ?string $navigationIcon = 'heroicon-o-arrow-right-start-on-rectangle';
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-arrow-right-start-on-rectangle';
 
     public function table(Table $table): Table
     {
@@ -64,20 +64,20 @@ class ManageWorkflowTransitions extends ManageRelatedRecords
                     ->modalDescription('Add a new transition to the workflow.')
                     ->createAnother(false)
             ])
-            ->actions([
+            ->recordActions([
                 DeleteAction::make()
             ])
-            ->bulkActions([
+            ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ]),
             ]);
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $form): Schema
     {
         return $form
-            ->schema([
+            ->components([
                 Select::make('from_state_id')
                     ->label('From State')
                     ->options($this->getOwnerRecord()->states->pluck('label', 'id'))
@@ -99,7 +99,7 @@ class ManageWorkflowTransitions extends ManageRelatedRecords
                             $workflow = $this->getOwnerRecord();
 
                             if ($fromStateId !== null && $fromStateId == $toStateId) {
-                                $fail('A state cannot transition to itself.');
+                                $fail('A state cannot have transition to itself.');
                             }
 
                             if ($fromStateId === null) {

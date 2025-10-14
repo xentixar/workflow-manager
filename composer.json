@@ -19,7 +19,7 @@
         "plugin"
     ],
     "require": {
-        "filament/support": "^3.0"
+        "filament/support": "^4.0"
     },
     "autoload": {
         "psr-4": {

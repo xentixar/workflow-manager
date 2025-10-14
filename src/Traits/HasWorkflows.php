@@ -16,14 +16,4 @@ trait HasWorkflows
     {
         return $this->hasMany(Workflow::class, 'model_class', get_class($this));
     }
-
-    /**
-     * Get the available states for the workflow.
-     *
-     * @return array
-     */
-    public static function getStates(): array
-    {
-        return [];
-    }
 }

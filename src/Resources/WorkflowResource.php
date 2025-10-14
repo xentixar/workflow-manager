@@ -2,14 +2,19 @@
 
 namespace Xentixar\WorkflowManager\Resources;
 
+use Filament\Actions\Action;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Xentixar\WorkflowManager\Resources\WorkflowResource\Pages;
-use Filament\Forms\Form;
-use Filament\Forms\Get;
-use Filament\Pages\SubNavigationPosition;
+use Filament\Pages\Enums\SubNavigationPosition;
 use Filament\Resources\Pages\Page;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -40,12 +45,12 @@ class WorkflowResource extends Resource
         return __('workflow-manager::workflow-manager.navigation.label');
     }
 
-    protected static SubNavigationPosition $subNavigationPosition = SubNavigationPosition::Top;
+    protected static ?SubNavigationPosition $subNavigationPosition = SubNavigationPosition::Top;
 
-    public static function form(Form $form): Form
+    public static function form(Schema $form): Schema
     {
         return $form
-            ->schema([
+            ->components([
                 TextInput::make('workflow_name')
                     ->required()
                     ->unique(ignoreRecord: true)
@@ -95,18 +100,18 @@ class WorkflowResource extends Resource
             ->filters([
                 //
             ])
-            ->actions([
-                Tables\Actions\Action::make('transitions')
+            ->recordActions([
+                Action::make('transitions')
                     ->label('Transitions')
                     ->color('info')
                     ->icon('heroicon-o-arrow-right-start-on-rectangle')
                     ->url(fn(Workflow $record): string => self::getUrl('transitions', ['record' => $record])),
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                EditAction::make(),
+                DeleteAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }

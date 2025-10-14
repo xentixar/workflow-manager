@@ -24,11 +24,7 @@ class WorkflowManagerServiceProvider extends PackageServiceProvider
                     ->askToRunMigrations();
             })
             ->hasTranslations()
-            ->hasConfigFile()
-            ->hasMigrations([
-                'create_workflows_table',
-                'create_workflow_transitions_table',
-            ]);
+            ->hasConfigFile();
     }
 
     public function boot(): void
@@ -41,16 +37,15 @@ class WorkflowManagerServiceProvider extends PackageServiceProvider
 
         $this->publishes([
             __DIR__ . '/../config/workflow-manager.php' => config_path('workflow-manager.php'),
-        ], 'config');
+        ], 'workflow-manager-config');
 
         $this->publishes([
-            __DIR__ . '/../database/migrations/create_workflows_table.php.stub' => database_path('migrations/' . date('Y_m_d_His', time()) . '_create_workflows_table.php'),
-            __DIR__ . '/../database/migrations/create_workflow_transitions_table.php.stub' => database_path('migrations/' . date('Y_m_d_His', time() + 1) . '_create_workflow_transitions_table.php'),
-        ], 'migrations');
+            __DIR__ . '/../database/migrations/' => database_path('migrations'),
+        ], 'workflow-manager-migrations');
 
         $this->publishes([
             __DIR__ . '/../resources/lang' => resource_path('lang/vendor/workflow-manager'),
-        ], 'translations');
+        ], 'workflow-manager-translations');
 
         FilamentAsset::register([
             Js::make('mermaid', __DIR__ . '/../resources/js/mermaid.js'),
