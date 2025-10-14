@@ -37,7 +37,7 @@ return [
      * These are the navigation settings for the workflow manager.
      */
     'navigation' => [
-        'label' => 'Status Workflow',
+        'label' => 'State Workflows',
         'group' => 'Settings',
         'sort' => "1",
         'icon' => 'heroicon-o-arrows-right-left',

@@ -96,7 +96,7 @@ Customize how the Workflow Manager appears in the Filament navigation:
 
 ```php
 'navigation' => [
-    'label' => 'Status Workflow',
+    'label' => 'State Workflows',
     'group' => 'Settings',
     'sort' => "1",
     'icon' => 'heroicon-o-arrows-right-left',
