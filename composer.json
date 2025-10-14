@@ -1,7 +1,9 @@
 {
     "name": "xentixar/workflow-manager",
     "type": "library",
+    "version": "2.0.0",
     "license": "MIT",
+    "description": "A workflow manager plugin for FilamentPHP with PHP enum support.",
     "authors": [
         {
             "name": "xentixar",
@@ -16,7 +18,9 @@
         "manager",
         "workflow-manager",
         "workflow-manager-plugin",
-        "plugin"
+        "plugin",
+        "enum",
+        "state-machine"
     ],
     "require": {
         "filament/support": "^4.0"

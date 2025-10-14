@@ -16,7 +16,7 @@ class WorkflowPolicy
         if (!$this->isPolicyEnabled()) {
             return true;
         }
-        return $user->can(__('workflow-manager::workflow-manager.permissions.view_any'));
+        return $user->can(config('workflow-manager.permissions.view_any'));
     }
 
     /**
@@ -27,7 +27,7 @@ class WorkflowPolicy
         if (!$this->isPolicyEnabled()) {
             return true;
         }
-        return $user->can(__('workflow-manager::workflow-manager.permissions.view'));
+        return $user->can(config('workflow-manager.permissions.view'));
     }
 
     /**
@@ -38,7 +38,7 @@ class WorkflowPolicy
         if (!$this->isPolicyEnabled()) {
             return true;
         }
-        return $user->can(__('workflow-manager::workflow-manager.permissions.create'));
+        return $user->can(config('workflow-manager.permissions.create'));
     }
 
     /**
@@ -49,7 +49,7 @@ class WorkflowPolicy
         if (!$this->isPolicyEnabled()) {
             return true;
         }
-        return $user->can(__('workflow-manager::workflow-manager.permissions.update'));
+        return $user->can(config('workflow-manager.permissions.update'));
     }
 
     /**
@@ -60,7 +60,7 @@ class WorkflowPolicy
         if (!$this->isPolicyEnabled()) {
             return true;
         }
-        return $user->can(__('workflow-manager::workflow-manager.permissions.delete'));
+        return $user->can(config('workflow-manager.permissions.delete'));
     }
 
     /**
@@ -71,7 +71,7 @@ class WorkflowPolicy
         if (!$this->isPolicyEnabled()) {
             return true;
         }
-        return $user->can(__('workflow-manager::workflow-manager.permissions.restore'));
+        return $user->can(config('workflow-manager.permissions.restore'));
     }
 
     /**
@@ -82,7 +82,7 @@ class WorkflowPolicy
         if (!$this->isPolicyEnabled()) {
             return true;
         }
-        return $user->can(__('workflow-manager::workflow-manager.permissions.force_delete'));
+        return $user->can(config('workflow-manager.permissions.force_delete'));
     }
 
     /**
@@ -93,7 +93,7 @@ class WorkflowPolicy
         if (!$this->isPolicyEnabled()) {
             return true;
         }
-        return $user->can(__('workflow-manager::workflow-manager.permissions.reorder'));
+        return $user->can(config('workflow-manager.permissions.reorder'));
     }
 
     /**
@@ -104,7 +104,7 @@ class WorkflowPolicy
         if (!$this->isPolicyEnabled()) {
             return true;
         }
-        return $user->can(__('workflow-manager::workflow-manager.permissions.replicate'));
+        return $user->can(config('workflow-manager.permissions.replicate'));
     }
 
     /**

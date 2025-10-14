@@ -11,12 +11,14 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Xentixar\WorkflowManager\Resources\WorkflowResource\Pages;
 use Filament\Pages\Enums\SubNavigationPosition;
+use Filament\Panel;
 use Filament\Resources\Pages\Page;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Xentixar\WorkflowManager\Models\Workflow;
 use Xentixar\WorkflowManager\Support\Helper;
@@ -27,29 +29,34 @@ class WorkflowResource extends Resource
 
     public static function getNavigationIcon(): string
     {
-        return __('workflow-manager::workflow-manager.navigation.icon');
+        return config('workflow-manager.navigation.icon');
     }
 
     public static function getNavigationGroup(): ?string
     {
-        return __('workflow-manager::workflow-manager.navigation.group');
+        return config('workflow-manager.navigation.group');
     }
 
     public static function getNavigationSort(): ?int
     {
-        return __('workflow-manager::workflow-manager.navigation.sort');
+        return config('workflow-manager.navigation.sort');
     }
 
     public static function getNavigationLabel(): string
     {
-        return __('workflow-manager::workflow-manager.navigation.label');
+        return config('workflow-manager.navigation.label');
+    }
+
+    public static function getSlug(?Panel $panel = null): string
+    {
+        return config('workflow-manager.navigation.slug');
     }
 
     protected static ?SubNavigationPosition $subNavigationPosition = SubNavigationPosition::Top;
 
-    public static function form(Schema $form): Schema
+    public static function form(Schema $schema): Schema
     {
-        return $form
+        return $schema
             ->components([
                 TextInput::make('workflow_name')
                     ->required()
@@ -59,6 +66,7 @@ class WorkflowResource extends Resource
 
                 Select::make('model_class')
                     ->required()
+                    ->label('Model Class')
                     ->searchable()
                     ->options(Helper::getAvailableModels())
                     ->live(),
@@ -68,13 +76,13 @@ class WorkflowResource extends Resource
                     ->searchable()
                     ->options(config('workflow-manager.roles'))
                     ->unique(
+                        ignoreRecord: true,
                         modifyRuleUsing: fn($rule, Get $get) => $rule
                             ->where('model_class', $get('model_class')),
-                        ignoreRecord: true,
                     )
                     ->validationMessages([
                         'unique' => 'The role has already been assigned to this model.',
-                    ])
+                    ]),
             ]);
     }
 
@@ -87,6 +95,7 @@ class WorkflowResource extends Resource
                     ->searchable()
                     ->label('Name'),
                 TextColumn::make('model_class')
+                    ->formatStateUsing(fn($state) => class_basename($state))
                     ->badge()
                     ->searchable()
                     ->label('Model'),
@@ -98,13 +107,22 @@ class WorkflowResource extends Resource
                     ->label('Role'),
             ])
             ->filters([
-                //
+                SelectFilter::make('model_class')
+                    ->label('Model')
+                    ->searchable()
+                    ->multiple()
+                    ->options(Helper::getAvailableModels()),
+                SelectFilter::make('role')
+                    ->label('Role')
+                    ->searchable()
+                    ->multiple()
+                    ->options(config('workflow-manager.roles', [])),
             ])
             ->recordActions([
                 Action::make('transitions')
                     ->label('Transitions')
                     ->color('info')
-                    ->icon('heroicon-o-arrow-right-start-on-rectangle')
+                    ->icon('heroicon-o-arrows-right-left')
                     ->url(fn(Workflow $record): string => self::getUrl('transitions', ['record' => $record])),
                 EditAction::make(),
                 DeleteAction::make(),

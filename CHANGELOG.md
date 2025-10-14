@@ -2,6 +2,33 @@
 
 All notable changes to the Workflow Manager package will be documented in this file.
 
+## v2.0.0 - 2025-10-14
+
+### Breaking Changes
+- **BREAKING**: Changed contract interface from `Workflows` to `WorkflowsContract`
+- **BREAKING**: Modified `getStates()` method to return enum class name instead of array
+- **BREAKING**: Renamed form component from `WorkflowStateSelect` to `StateSelect`
+- **BREAKING**: Changed component method from `workflowModel()` to `setWorkflowForModel()` and `setRole()`
+
+### Added
+- **Filament 4.0 Support**: Full compatibility with Filament v4.0 and higher
+- **PHP Enum Support**: Full integration with PHP 8.1+ enums for type-safe state management
+- **Enhanced Configuration**: Added `ignored_actions` configuration for flexible workflow validation
+- **Improved Helper Class**: Better model discovery and enum state extraction
+- **Enhanced Validation**: More robust state transition validation with enum support
+- **Consolidated Configuration**: Moved navigation and permission translations to config file for easier customization
+
+### Changed
+- Updated to work with Filament 4.0+
+- Improved state selection component with better validation rules
+- Enhanced database schema for better performance
+- Updated documentation with comprehensive examples and troubleshooting
+
+### Fixed
+- Fixed interface naming inconsistencies throughout the codebase
+- Improved error handling for invalid enum classes
+- Better validation of model implementations
+
 ## v1.0.1 - 2025-04-23
 
 ### Database Schema Changes

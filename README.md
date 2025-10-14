@@ -2,23 +2,25 @@
 
 ![banner](./banner.svg)
 
-A powerful workflow management package for Laravel Filament that allows you to define and manage state transitions for your Laravel models.
+A powerful workflow management package for Laravel Filament that allows you to define and manage state transitions for your Laravel models using PHP enums.
 
 ## Overview
 
 Workflow Manager provides a simple yet flexible way to define and manage workflows in your Laravel Filament application. It allows you to:
 
-- Define workflow states for your models
-- Configure transitions between states
-- Visualize workflows with Mermaid.js diagrams
+- Define workflow states for your models using PHP enums
+- Configure transitions between states with validation
+- Visualize workflows with an intuitive admin interface
 - Control access to state transitions based on user roles
 - Add workflow management to any Laravel model
+- Support for role-based workflow management
+- Include parent state transitions (configurable)
 
 ## Requirements
 
-- PHP 8.0 or higher
-- Laravel 10.0 or higher
-- Filament 3.0 or higher
+- PHP 8.1 or higher
+- Laravel 11.0 or higher
+- Filament 4.0 or higher
 
 ## Installation
 
@@ -31,15 +33,14 @@ composer require xentixar/workflow-manager
 After installing the package, you can publish the assets separately:
 
 ```bash
-# Publish configuration
+# Publish configuration (includes navigation and permission settings)
 php artisan vendor:publish --tag=workflow-manager-config
 
 # Publish migrations
 php artisan vendor:publish --tag=workflow-manager-migrations
-
-# Publish translations
-php artisan vendor:publish --tag=workflow-manager-translations
 ```
+
+> **Note**: Starting from v2.0, translations have been moved to the configuration file for easier management. You no longer need to publish separate translation files.
 
 Then run the migrations:
 
@@ -65,7 +66,7 @@ Define the roles that will be used to bind workflows to users:
 
 ### Include Parent
 
-Determine whether parent states should be included with child states in select options:
+Determine whether parent states should be included with child states in select options. When enabled, users can transition back to previous states:
 
 ```php
 'include_parent' => true,
@@ -79,11 +80,19 @@ Enable or disable the workflow policy. Note that you need to install and configu
 'enable_policy' => true,
 ```
 
-## Language Files
+### Ignored Actions
 
-The package includes language files that allow you to customize various text elements used throughout the workflow manager. After publishing translations, you can find the language files at `resources/lang/vendor/workflow-manager/`.
+Specify which Filament actions should ignore workflow validation. During these actions, all state options will be available:
 
-The language file includes:
+```php
+'ignored_actions' => [
+    'create',
+],
+```
+
+### Navigation
+
+Customize how the Workflow Manager appears in the Filament navigation:
 
 ```php
 'navigation' => [
@@ -91,8 +100,15 @@ The language file includes:
     'group' => 'Settings',
     'sort' => "1",
     'icon' => 'heroicon-o-arrows-right-left',
+    'slug' => 'workflows',
 ],
+```
 
+### Permissions
+
+Define the permission names used for authorization when policies are enabled:
+
+```php
 'permissions' => [
     'view_any' => 'view_any_workflow',
     'view' => 'view_workflow',
@@ -106,13 +122,15 @@ The language file includes:
 ],
 ```
 
-You can modify these values to customize how the Workflow Manager appears in the Filament navigation and the permission names used for authorization.
+## Configuration Customization
+
+All customization options are now consolidated in the configuration file for easier management. After publishing the configuration file, you can modify:
 
 ## Usage
 
 ### Setting Up Your Models
 
-To use Workflow Manager with your models, implement the `Workflows` interface and use the `HasWorkflows` trait:
+To use Workflow Manager with your models, implement the `WorkflowsContract` interface and use the `HasWorkflows` trait:
 
 ```php
 <?php
@@ -120,32 +138,56 @@ To use Workflow Manager with your models, implement the `Workflows` interface an
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Xentixar\WorkflowManager\Contracts\Workflows;
+use Xentixar\WorkflowManager\Contracts\WorkflowsContract;
 use Xentixar\WorkflowManager\Traits\HasWorkflows;
 
-class YourModel extends Model implements Workflows
+class YourModel extends Model implements WorkflowsContract
 {
     use HasWorkflows;
 
     /**
-     * Get the available states for the workflow.
+     * Get the enum class representing available states.
      *
-     * @return array
+     * @return string
      */
-    public static function getStates(): array
+    public static function getStates(): string
     {
-        return [
-            'draft' => 'Draft',
-            'review' => 'Under Review',
-            'approved' => 'Approved',
-            'published' => 'Published',
-            'rejected' => 'Rejected',
-        ];
+        return YourModelStatusEnum::class;
     }
 }
 ```
 
-The `getStates()` method should return an array of possible states for your model, with keys as state identifiers and values as human-readable labels.
+### Creating State Enums
+
+Create a PHP enum that defines your workflow states:
+
+```php
+<?php
+
+namespace App\Enums;
+
+enum YourModelStatusEnum: string
+{
+    case DRAFT = 'draft';
+    case REVIEW = 'review';
+    case APPROVED = 'approved';
+    case PUBLISHED = 'published';
+    case REJECTED = 'rejected';
+
+    public function getLabel(): string
+    {
+        return match ($this) {
+            self::DRAFT => 'Draft',
+            self::REVIEW => 'Under Review',
+            self::APPROVED => 'Approved',
+            self::PUBLISHED => 'Published',
+            self::REJECTED => 'Rejected',
+        };
+    }
+}
+```
+
+The `getStates()` method should return the fully qualified class name of your enum. The enum must be a backed enum with string values and should include a `getLabel()` method for human-readable labels.
 
 ### Registering the Plugin with Filament
 
@@ -175,40 +217,138 @@ Once the package is installed and configured, you can create and manage workflow
 
 ### Workflow State Selection in Forms
 
-You can use the `WorkflowStateSelect` component in your Filament forms:
+You can use the `StateSelect` component in your Filament forms:
 
 ```php
-use Xentixar\WorkflowManager\Forms\Components\WorkflowStateSelect;
+use Xentixar\WorkflowManager\Forms\Components\StateSelect;
 
-WorkflowStateSelect::make('status')
-    ->workflowModel(YourModel::class, 'admin')
+StateSelect::make('status')
+    ->setWorkflowForModel(YourModel::class)
+    ->setRole('admin')
     ->required()
 ```
 
-The `workflowModel()` method takes two parameters:
-1. The model class that implements the `Workflows` interface
-2. The role that should manage this workflow (must match a key in the roles configuration)
+The component requires two method calls:
+1. `setWorkflowForModel()` - The model class that implements the `WorkflowsContract` interface
+2. `setRole()` - The role that should manage this workflow (must match a key in the roles configuration)
 
-This will automatically display the appropriate state options based on the defined workflow and the current state of the model.
+This will automatically display the appropriate state options based on the defined workflow and the current state of the model, enforcing workflow transition rules.
 
 ### Transition Rules
 
 When defining state transitions in the admin panel, you can specify:
 
-1. The starting state
-2. The possible next states (transitions)
+1. **From State**: The starting state for the transition
+2. **To State**: The destination state for the transition
+3. **Workflow Context**: Each transition belongs to a specific workflow and role
+
+The package automatically validates transitions based on your defined rules:
+- Users can only transition to states that have been explicitly defined as valid transitions
+- If `include_parent` is enabled, users can also transition back to previous states
+- During ignored actions (like 'create'), all states are available regardless of workflow rules
+
+## Database Structure
+
+The package creates three main tables:
+
+### workflows
+- `id`: Primary key
+- `model_class`: The morph class of the model (e.g., 'App\Models\User')
+- `workflow_name`: Unique name for the workflow
+- `role`: Role associated with this workflow
+- `created_at`, `updated_at`: Timestamps
+
+### workflow_states
+- `id`: Primary key
+- `state`: The enum value (e.g., 'draft', 'approved')
+- `workflow_id`: Foreign key to workflows table
+- `label`: Human-readable label for the state
+- `created_at`, `updated_at`: Timestamps
+- Unique constraint on `workflow_id` and `state`
+
+### workflow_transitions
+- `id`: Primary key
+- `from_state_id`: Foreign key to workflow_states (nullable for initial states)
+- `to_state_id`: Foreign key to workflow_states
+- `workflow_id`: Foreign key to workflows table
+- `created_at`, `updated_at`: Timestamps
 
 ## Visualizing Workflows
 
-Workflow Manager includes a visualization feature using Mermaid.js. When editing a workflow in the Filament admin panel, you can see a diagram of the workflow states and transitions.
+The Workflow Manager includes an admin interface through Filament where you can:
 
-The visualization leverages the powerful [Mermaid.js](https://mermaid-js.github.io/) library to generate interactive diagrams of your workflow states and transitions. This makes it easy to understand complex workflows at a glance and helps in designing effective state machines for your application's processes.
+- View all defined workflows
+- Create new workflows for your models
+- Manage states for each workflow
+- Define transitions between states
+- Visualize the workflow structure
+
+The admin interface automatically detects models that implement the `WorkflowsContract` interface and makes them available for workflow creation.
 
 ## Advanced Usage
 
-### Custom Transition Logic
+### Custom Validation Rules
 
-You can implement custom logic for state transitions by extending the base `WorkflowTransition` model or by adding event listeners.
+The `StateSelect` component automatically applies validation rules based on your workflow configuration. It uses Laravel's `Rule::in()` to ensure only valid transitions are allowed.
+
+### Role-based Workflow Management
+
+Different roles can have different workflows for the same model. For example:
+- Admins might have access to all state transitions
+- Regular users might have limited transition options
+- Managers might have their own workflow with different rules
+
+### Automatic Model Discovery
+
+The package includes a `Helper` class that automatically discovers models in your application that implement the `WorkflowsContract` interface, making them available in the admin panel.
+
+### Enum Integration
+
+The package is designed to work seamlessly with PHP enums, providing type safety and better code organization compared to string-based states.
+
+## API Reference
+
+### WorkflowsContract Interface
+
+```php
+interface WorkflowsContract
+{
+    /**
+     * Get the workflows for the model.
+     */
+    public function workflows(): HasMany;
+
+    /**
+     * Get the enum class representing available states.
+     */
+    public static function getStates(): string;
+}
+```
+
+### HasWorkflows Trait
+
+The trait provides the `workflows()` relationship method:
+
+```php
+public function workflows(): HasMany
+{
+    return $this->hasMany(Workflow::class, 'model_class', get_class($this));
+}
+```
+
+### StateSelect Component Methods
+
+```php
+// Set the model class
+StateSelect::make('status')->setWorkflowForModel(YourModel::class)
+
+// Set the role
+StateSelect::make('status')->setRole('admin')
+
+// Get current configuration
+$component->getWorkflowModel(); // Returns the model class
+$component->getRole();          // Returns the role
+```
 
 ### Integrating with Permissions
 
@@ -219,33 +359,62 @@ When `enable_policy` is set to `true`, the package will use Spatie's Laravel Per
 ### A Simple Approval Workflow
 
 ```php
+// Enum definition
+<?php
+
+namespace App\Enums;
+
+enum DocumentStatusEnum: string
+{
+    case DRAFT = 'draft';
+    case SUBMITTED = 'submitted';
+    case APPROVED = 'approved';
+    case REJECTED = 'rejected';
+
+    public function getLabel(): string
+    {
+        return match ($this) {
+            self::DRAFT => 'Draft',
+            self::SUBMITTED => 'Submitted',
+            self::APPROVED => 'Approved',
+            self::REJECTED => 'Rejected',
+        };
+    }
+}
+
 // Model definition
-class Document extends Model implements Workflows
+class Document extends Model implements WorkflowsContract
 {
     use HasWorkflows;
 
-    public static function getStates(): array
+    protected $fillable = ['title', 'content', 'status'];
+
+    protected function casts(): array
     {
         return [
-            'draft' => 'Draft',
-            'submitted' => 'Submitted',
-            'approved' => 'Approved',
-            'rejected' => 'Rejected',
+            'status' => DocumentStatusEnum::class,
         ];
+    }
+
+    public static function getStates(): string
+    {
+        return DocumentStatusEnum::class;
     }
 }
 
 // In your Filament resource
-use Xentixar\WorkflowManager\Forms\Components\WorkflowStateSelect;
+use Xentixar\WorkflowManager\Forms\Components\StateSelect;
 
 // Form definition
 public static function form(Form $form): Form
 {
     return $form
         ->schema([
-            // Other fields...
-            WorkflowStateSelect::make('status')
-                ->workflowModel(Document::class, 'admin')
+            TextInput::make('title')->required(),
+            Textarea::make('content')->required(),
+            StateSelect::make('status')
+                ->setWorkflowForModel(Document::class)
+                ->setRole('admin')
                 ->required(),
         ]);
 }
@@ -255,9 +424,12 @@ public static function form(Form $form): Form
 
 ### Common Issues
 
-1. **Workflows not appearing**: Make sure your model correctly implements the `Workflows` interface and uses the `HasWorkflows` trait.
+1. **Workflows not appearing**: Make sure your model correctly implements the `WorkflowsContract` interface and uses the `HasWorkflows` trait.
 2. **Cannot access workflow management**: Check that the user has the appropriate permissions if you have enabled policies.
-3. **State options not showing**: Verify that you have defined states in your model's `getStates()` method.
+3. **State options not showing**: Verify that you have defined states in your model's `getStates()` method and that it returns a valid enum class name.
+4. **Enum not found**: Ensure your enum class exists and is properly namespaced. The `getStates()` method should return the fully qualified class name.
+5. **Invalid transitions**: Check that you have defined the appropriate transitions in the workflow admin interface.
+6. **Component not found**: Make sure you're importing `StateSelect` from the correct namespace: `Xentixar\WorkflowManager\Forms\Components\StateSelect`.
 
 ## Contributing
 
@@ -270,4 +442,4 @@ This package is open-sourced software licensed under the MIT license.
 ## Credits
 
 - Developed by [Xentixar](mailto:xentixar@gmail.com).
-- Workflow visualization powered by [Mermaid.js](https://mermaid-js.github.io/), a JavaScript-based diagramming and charting tool that uses Markdown-inspired text definitions to create and modify diagrams dynamically.
+- Built for Laravel Filament framework.

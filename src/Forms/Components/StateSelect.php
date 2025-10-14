@@ -1,0 +1,201 @@
+<?php
+
+namespace Xentixar\WorkflowManager\Forms\Components;
+
+use Closure;
+use Filament\Forms\Components\Select;
+use Filament\Schemas\Components\Utilities\Get;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Validation\Rule;
+use InvalidArgumentException;
+use Xentixar\WorkflowManager\Contracts\WorkflowsContract;
+use Xentixar\WorkflowManager\Models\Workflow;
+use Xentixar\WorkflowManager\Models\WorkflowTransition;
+use Xentixar\WorkflowManager\Models\WorkflowState;
+use Xentixar\WorkflowManager\Support\Helper;
+
+class StateSelect extends Select
+{
+    protected ?string $workflowModel = null;
+
+    protected ?string $role = null;
+
+    public static function make(?string $name = 'status'): static
+    {
+        $static = parent::make($name)->label('Status');
+
+        return $static
+            ->selectablePlaceholder(false)
+            ->options(fn($get) => self::resolveOptions($static->getWorkflowModel(), $static->getRole()))
+            ->disableOptionWhen(function (string $value, Get $get, ?Model $record, $operation) use ($static, $name) {
+                if (in_array($operation, config('workflow-manager.ignored_actions', []))) {
+                    return false;
+                }
+                
+                $workflowModel = $static->getWorkflowModel();
+                $role = $static->getRole();
+                $currentState = $name ? $record?->getAttribute($name) : null;
+                $currentState = $currentState ?? $static->getDefaultState();
+                if (! $currentState || ! $workflowModel || ! $role) {
+                    return false;
+                }
+                if (is_object($currentState) && enum_exists(get_class($currentState))) {
+                    $currentState = $currentState->value; // @phpstan-ignore-line
+                }
+
+                return self::shouldDisableOption($value, $currentState, $workflowModel, $role);
+            }, true);
+    }
+
+    /**
+     * Set the model class that uses the Workflows trait.
+     * 
+     * @param class-string $model
+     * @throws InvalidArgumentException
+     */
+    public function setWorkflowForModel(string $model): static
+    {
+        if (! ((new $model) instanceof WorkflowsContract)) {
+            throw new InvalidArgumentException('The model class must implement the Workflows contract.');
+        }
+
+        $this->workflowModel = $model;
+
+        return $this;
+    }
+
+    public function setRole(string $role): static
+    {
+        $this->role = $role;
+
+        return $this;
+    }
+
+    public function getWorkflowModel(): ?string
+    {
+        return $this->workflowModel;
+    }
+
+    public function getRole(): ?string
+    {
+        return $this->role;
+    }
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->rule(function (Get $get, ?Model $record, $operation) {
+            if (in_array($operation, config('workflow-manager.ignored_actions', []))) {
+                return [];
+            }
+
+            $workflowModel = $this->getWorkflowModel();
+            $role = $this->getRole();
+            $name = $this->getName();
+            $currentState = $record?->getAttribute($name) ?? $this->getDefaultState();
+
+            if (! $workflowModel || ! $role || ! $currentState) {
+                return [];
+            }
+
+
+            if (is_object($currentState) && enum_exists(get_class($currentState))) {
+                $currentState = $currentState->value; // @phpstan-ignore-line
+            }
+
+            $options = self::resolveOptions($workflowModel, $role);
+
+            $enabledOptions = array_filter(
+                $options,
+                function ($label, $value) use ($workflowModel, $role, $currentState) {
+                    $workflowDisabled = self::shouldDisableOption($value, $currentState, $workflowModel, $role);
+
+                    return ! ($workflowDisabled);
+                },
+                ARRAY_FILTER_USE_BOTH
+            );
+
+            return [Rule::in(array_keys($enabledOptions))];
+        });
+    }
+
+    /**
+     * Returns the available options for the given model and role.
+     *
+     * @return array<string, string>
+     */
+    private static function resolveOptions(?string $model, ?string $role): array
+    {
+        if (! $model || ! $role) {
+            return [];
+        }
+
+        $morphClass = (new $model)->getMorphClass(); // @phpstan-ignore-line
+
+        $workflow = Workflow::query()
+            ->where('model_class', $morphClass)
+            ->where('role', $role)
+            ->with('states')
+            ->first();
+
+        $enumClass = $model::getStates();
+        $defaultStates = Helper::getStatesFromEnum($enumClass);
+
+        return $workflow?->states->pluck('label', 'state')->toArray() ?? $defaultStates;
+    }
+
+    private static function shouldDisableOption(string $value, string $currentState, ?string $model, ?string $role): bool
+    {
+        if (! $currentState || ! $model || ! $role) {
+            return false;
+        }
+
+        $morphClass = (new $model)->getMorphClass(); // @phpstan-ignore-line
+
+        $workflow = Workflow::query()
+            ->where('model_class', $morphClass)
+            ->where('role', $role)
+            ->first();
+
+        if (! $workflow) {
+            return false;
+        }
+
+        $currentState = WorkflowState::query()
+            ->where('workflow_id', $workflow->id)
+            ->where('state', $currentState)
+            ->first();
+
+        if (! $currentState) {
+            return true;
+        }
+
+        $acceptedStateIds = [$currentState->id];
+
+        $children = WorkflowTransition::query()
+            ->where('workflow_id', $workflow->id)
+            ->where('from_state_id', $currentState->id)
+            ->pluck('to_state_id')
+            ->toArray();
+
+        $parents = [];
+        if (config('workflow-manager.include_parent')) {
+            $parents = WorkflowTransition::query()
+                ->where('workflow_id', $workflow->id)
+                ->where('to_state_id', $currentState->id)
+                ->pluck('from_state_id')
+                ->toArray();
+        }
+
+        $acceptedStateIds = array_merge($acceptedStateIds, $children, $parents);
+
+        $targetState = WorkflowState::query()
+            ->where('workflow_id', $workflow->id)
+            ->where('state', $value)
+            ->first();
+
+        return ! $targetState || ! in_array($targetState->id, $acceptedStateIds);
+    }
+}

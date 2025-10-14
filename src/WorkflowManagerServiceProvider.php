@@ -23,7 +23,6 @@ class WorkflowManagerServiceProvider extends PackageServiceProvider
                     ->publishMigrations()
                     ->askToRunMigrations();
             })
-            ->hasTranslations()
             ->hasConfigFile();
     }
 
@@ -42,10 +41,6 @@ class WorkflowManagerServiceProvider extends PackageServiceProvider
         $this->publishes([
             __DIR__ . '/../database/migrations/' => database_path('migrations'),
         ], 'workflow-manager-migrations');
-
-        $this->publishes([
-            __DIR__ . '/../resources/lang' => resource_path('lang/vendor/workflow-manager'),
-        ], 'workflow-manager-translations');
 
         FilamentAsset::register([
             Js::make('mermaid', __DIR__ . '/../resources/js/mermaid.js'),

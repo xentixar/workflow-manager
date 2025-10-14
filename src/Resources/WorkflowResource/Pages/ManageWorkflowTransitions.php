@@ -25,7 +25,7 @@ class ManageWorkflowTransitions extends ManageRelatedRecords
 
     protected static ?string $title = 'Manage Transitions';
 
-    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-arrow-right-start-on-rectangle';
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-arrows-right-left';
 
     public function table(Table $table): Table
     {

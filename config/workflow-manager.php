@@ -31,4 +31,47 @@ return [
      * @note: You should have to install and configure the spatie/laravel-permission package to use this feature.
      */
     'enable_policy' => true,
+
+    /**
+     * --------------------------------------------------------------------------
+     * Navigation
+     * --------------------------------------------------------------------------
+     * These are the navigation settings for the workflow manager.
+     */
+    'navigation' => [
+        'label' => 'Status Workflow',
+        'group' => 'Settings',
+        'sort' => "1",
+        'icon' => 'heroicon-o-arrows-right-left',
+        'slug' => 'workflows',
+    ],
+
+    /**
+     * --------------------------------------------------------------------------
+     * Permissions
+     * --------------------------------------------------------------------------
+     * These are the permissions that are used in the policy.
+     */
+    'permissions' => [
+        'view_any' => 'view_any_workflow',
+        'view' => 'view_workflow',
+        'create' => 'create_workflow',
+        'update' => 'update_workflow',
+        'delete' => 'delete_workflow',
+        'restore' => 'restore_workflow',
+        'force_delete' => 'force_delete_workflow',
+        'reorder' => 'reorder_workflow',
+        'replicate' => 'replicate_workflow',
+    ],
+
+    /**
+     * --------------------------------------------------------------------------
+     * Ignore On Actions
+     * --------------------------------------------------------------------------
+     * The actions on which the workflow should be ignored
+     * If the current action is in this array, the workflow will be ignored and all options will be enabled
+     */
+    'ignored_actions' => [
+        'create',
+    ],
 ];
