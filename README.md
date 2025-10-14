@@ -74,7 +74,7 @@ Determine whether parent states should be included with child states in select o
 
 ### Enable Policy
 
-Enable or disable the workflow policy. Note that you need to install and configure the `spatie/laravel-permission` package to use this feature:
+Enable or disable the workflow policy. When enabled, it uses Laravel's built-in authorization system:
 
 ```php
 'enable_policy' => true,
@@ -247,32 +247,6 @@ The package automatically validates transitions based on your defined rules:
 - If `include_parent` is enabled, users can also transition back to previous states
 - During ignored actions (like 'create'), all states are available regardless of workflow rules
 
-## Database Structure
-
-The package creates three main tables:
-
-### workflows
-- `id`: Primary key
-- `model_class`: The morph class of the model (e.g., 'App\Models\User')
-- `workflow_name`: Unique name for the workflow
-- `role`: Role associated with this workflow
-- `created_at`, `updated_at`: Timestamps
-
-### workflow_states
-- `id`: Primary key
-- `state`: The enum value (e.g., 'draft', 'approved')
-- `workflow_id`: Foreign key to workflows table
-- `label`: Human-readable label for the state
-- `created_at`, `updated_at`: Timestamps
-- Unique constraint on `workflow_id` and `state`
-
-### workflow_transitions
-- `id`: Primary key
-- `from_state_id`: Foreign key to workflow_states (nullable for initial states)
-- `to_state_id`: Foreign key to workflow_states
-- `workflow_id`: Foreign key to workflows table
-- `created_at`, `updated_at`: Timestamps
-
 ## Visualizing Workflows
 
 The Workflow Manager includes an admin interface through Filament where you can:
@@ -306,53 +280,9 @@ The package includes a `Helper` class that automatically discovers models in you
 
 The package is designed to work seamlessly with PHP enums, providing type safety and better code organization compared to string-based states.
 
-## API Reference
-
-### WorkflowsContract Interface
-
-```php
-interface WorkflowsContract
-{
-    /**
-     * Get the workflows for the model.
-     */
-    public function workflows(): HasMany;
-
-    /**
-     * Get the enum class representing available states.
-     */
-    public static function getStates(): string;
-}
-```
-
-### HasWorkflows Trait
-
-The trait provides the `workflows()` relationship method:
-
-```php
-public function workflows(): HasMany
-{
-    return $this->hasMany(Workflow::class, 'model_class', get_class($this));
-}
-```
-
-### StateSelect Component Methods
-
-```php
-// Set the model class
-StateSelect::make('status')->setWorkflowForModel(YourModel::class)
-
-// Set the role
-StateSelect::make('status')->setRole('admin')
-
-// Get current configuration
-$component->getWorkflowModel(); // Returns the model class
-$component->getRole();          // Returns the role
-```
-
 ### Integrating with Permissions
 
-When `enable_policy` is set to `true`, the package will use Spatie's Laravel Permission package to control access to workflows. Make sure to configure your permissions accordingly.
+When `enable_policy` is set to `true`, the package will use Laravel's built-in authorization system to control access to workflows. You can implement permissions using Laravel Gates, Policies, or any authorization package like Spatie's Laravel Permission. The policy checks for permissions using Laravel's standard `$user->can()` method.
 
 ## Examples
 

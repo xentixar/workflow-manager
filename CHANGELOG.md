@@ -28,6 +28,7 @@ All notable changes to the Workflow Manager package will be documented in this f
 - Fixed interface naming inconsistencies throughout the codebase
 - Improved error handling for invalid enum classes
 - Better validation of model implementations
+- **Clarified Authorization**: Removed incorrect Spatie package dependency - the package uses Laravel's built-in authorization system
 
 ## v1.0.1 - 2025-04-23
 

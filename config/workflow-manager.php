@@ -25,10 +25,8 @@ return [
      * --------------------------------------------------------------------------
      * Enable Policy
      * --------------------------------------------------------------------------
-     * If true, the policy will be enabled
+     * If true, the policy will be enabled using Laravel's authorization system
      * If false, the policy will be disabled
-     * 
-     * @note: You should have to install and configure the spatie/laravel-permission package to use this feature.
      */
     'enable_policy' => true,
 
