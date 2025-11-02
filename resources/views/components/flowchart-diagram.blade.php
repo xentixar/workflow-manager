@@ -1,6 +1,7 @@
 @php
     $states = $workflow->states()->get()->keyBy('id');
     $transitions = $workflow->transitions()->with(['fromState', 'toState'])->get();
+    $includeParent = config('workflow-manager.include_parent', false);
 
     $nodeLabels = [];
     $transitionLines = [];
@@ -19,7 +20,13 @@
                 $fromLabel = $fromState->label ?? $fromState->state;
                 $nodeLabels[$fromKey] = $fromLabel;
 
+                // Forward transition (normal arrow)
                 $transitionLines[] = $fromKey . ' --> ' . $toKey;
+                
+                // Reverse transition (if include_parent is enabled)
+                if ($includeParent) {
+                    $transitionLines[] = $toKey . ' -.-> ' . $fromKey;
+                }
             } else {
                 $transitionLines[] = 'start((Start)) --> ' . $toKey;
             }

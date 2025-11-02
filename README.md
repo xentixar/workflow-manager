@@ -10,11 +10,33 @@ Workflow Manager provides a simple yet flexible way to define and manage workflo
 
 - Define workflow states for your models using PHP enums
 - Configure transitions between states with validation
-- Visualize workflows with an intuitive admin interface
+- Visualize workflows with interactive Mermaid.js diagrams
 - Control access to state transitions based on user roles
 - Add workflow management to any Laravel model
 - Support for role-based workflow management
-- Include parent state transitions (configurable)
+- Include parent state transitions (configurable reverse transitions)
+- Flexible action-based validation with ignored actions
+- Type-safe state management with PHP 8.1+ enum integration
+
+## Features
+
+✨ **PHP Enum Integration** - Leverage PHP 8.1+ enums for type-safe state management
+
+🎨 **Interactive Diagrams** - Visualize workflows with auto-generated Mermaid.js flowcharts showing forward and reverse transitions
+
+👥 **Role-Based Workflows** - Create different workflow rules for different user roles (admin, user, etc.)
+
+🔒 **Laravel Authorization** - Built-in policy support using Laravel's native authorization system
+
+⚡ **Flexible Validation** - Configure actions where workflow validation should be bypassed (create, replicate, etc.)
+
+🔄 **Bidirectional Transitions** - Enable reverse transitions to allow going back to previous states
+
+🎯 **Form Component** - Ready-to-use `StateSelect` component with automatic validation
+
+🔍 **Auto Discovery** - Automatically detects models implementing the workflow contract
+
+⚙️ **Highly Configurable** - Customize navigation, permissions, roles, and behavior via config file
 
 ## Requirements
 
@@ -234,18 +256,37 @@ The component requires two method calls:
 
 This will automatically display the appropriate state options based on the defined workflow and the current state of the model, enforcing workflow transition rules.
 
+#### Ignoring Workflow Validation on Specific Actions
+
+You can configure specific actions where workflow validation should be ignored, allowing all state options to be available:
+
+```php
+StateSelect::make('status')
+    ->setWorkflowForModel(YourModel::class)
+    ->setRole('admin')
+    ->setIgnoredActions(['create', 'replicate'])
+    ->required()
+```
+
+The `setIgnoredActions()` method accepts:
+- An array of action names to ignore (e.g., `'create'`, `'edit'`, `'replicate'`)
+- An optional second parameter `$override` (default: `false`) - if `true`, replaces the default ignored actions; if `false`, merges with the default list from configuration
+
+By default, the component uses the `ignored_actions` configuration from `config/workflow-manager.php`.
+
 ### Transition Rules
 
 When defining state transitions in the admin panel, you can specify:
 
-1. **From State**: The starting state for the transition
-2. **To State**: The destination state for the transition
+1. **From State**: The starting state for the transition (parent state)
+2. **To State**: The destination state for the transition (child state)
 3. **Workflow Context**: Each transition belongs to a specific workflow and role
 
 The package automatically validates transitions based on your defined rules:
 - Users can only transition to states that have been explicitly defined as valid transitions
-- If `include_parent` is enabled, users can also transition back to previous states
-- During ignored actions (like 'create'), all states are available regardless of workflow rules
+- If `include_parent` is enabled in configuration, users can also transition back to previous states (reverse transitions)
+- During ignored actions (like 'create' by default), all states are available regardless of workflow rules
+- You can customize ignored actions per form using `setIgnoredActions()` method
 
 ## Visualizing Workflows
 
@@ -255,15 +296,56 @@ The Workflow Manager includes an admin interface through Filament where you can:
 - Create new workflows for your models
 - Manage states for each workflow
 - Define transitions between states
-- Visualize the workflow structure
+- Visualize the workflow structure with interactive diagrams
 
 The admin interface automatically detects models that implement the `WorkflowsContract` interface and makes them available for workflow creation.
+
+### Interactive Workflow Diagrams
+
+Workflow Manager includes built-in visualization of your workflows using Mermaid.js diagrams. Each workflow displays an interactive flowchart showing:
+
+- **States**: All defined states in your workflow
+- **Forward Transitions**: Solid arrows (`-->`) showing allowed state transitions
+- **Reverse Transitions**: Dotted arrows (`-.->`) showing backward transitions (when `include_parent` is enabled)
+- **Start Node**: Visual indicator of workflow entry points
+
+The diagrams are automatically generated based on your workflow configuration and update dynamically as you modify transitions. This provides a clear visual representation of your workflow logic, making it easier to understand and maintain complex state machines.
 
 ## Advanced Usage
 
 ### Custom Validation Rules
 
 The `StateSelect` component automatically applies validation rules based on your workflow configuration. It uses Laravel's `Rule::in()` to ensure only valid transitions are allowed.
+
+### Customizing Ignored Actions
+
+You can control workflow validation behavior for specific actions:
+
+**Global Configuration** (applies to all StateSelect components):
+```php
+// config/workflow-manager.php
+'ignored_actions' => [
+    'create',
+    'replicate',
+],
+```
+
+**Per-Component Configuration**:
+```php
+// Merge with global ignored actions (default behavior)
+StateSelect::make('status')
+    ->setWorkflowForModel(YourModel::class)
+    ->setRole('admin')
+    ->setIgnoredActions(['edit']) // Adds 'edit' to the list
+    ->required()
+
+// Override global ignored actions completely
+StateSelect::make('status')
+    ->setWorkflowForModel(YourModel::class)
+    ->setRole('admin')
+    ->setIgnoredActions(['create', 'replicate'], override: true) // Replaces the list
+    ->required()
+```
 
 ### Role-based Workflow Management
 
@@ -279,6 +361,25 @@ The package includes a `Helper` class that automatically discovers models in you
 ### Enum Integration
 
 The package is designed to work seamlessly with PHP enums, providing type safety and better code organization compared to string-based states.
+
+### Workflow Visualization
+
+The package includes a powerful visualization component that renders your workflows as interactive diagrams:
+
+**Diagram Features:**
+- **Automatic Generation**: Diagrams are generated automatically from your workflow configuration
+- **Visual State Representation**: Each state is displayed as a node with its label
+- **Transition Arrows**: Solid arrows show forward transitions, dotted arrows show reverse transitions
+- **Real-time Updates**: Diagrams update immediately when you modify workflow transitions
+- **Mermaid.js Integration**: Uses Mermaid.js for clean, professional diagram rendering
+
+The diagram clearly shows:
+```
+Draft --> Under Review --> Approved --> Published
+  ^          ^              ^
+  |          |              |
+  '----------'--------------' (if include_parent is enabled)
+```
 
 ### Integrating with Permissions
 
@@ -345,6 +446,7 @@ public static function form(Form $form): Form
             StateSelect::make('status')
                 ->setWorkflowForModel(Document::class)
                 ->setRole('admin')
+                ->setIgnoredActions(['create']) // Optional: customize ignored actions
                 ->required(),
         ]);
 }
@@ -360,6 +462,10 @@ public static function form(Form $form): Form
 4. **Enum not found**: Ensure your enum class exists and is properly namespaced. The `getStates()` method should return the fully qualified class name.
 5. **Invalid transitions**: Check that you have defined the appropriate transitions in the workflow admin interface.
 6. **Component not found**: Make sure you're importing `StateSelect` from the correct namespace: `Xentixar\WorkflowManager\Forms\Components\StateSelect`.
+7. **All states available during edit**: This is expected behavior if 'edit' is not in your `ignored_actions` configuration. Add it if you want workflow validation during edits.
+8. **Diagram not rendering**: Ensure Mermaid.js is properly loaded. The package includes it automatically in the Filament admin panel.
+9. **Reverse transitions not showing**: Check that `include_parent` is set to `true` in your `config/workflow-manager.php` file.
+10. **Workflow validation bypassed**: Verify that the current action is not in the `ignored_actions` list, either globally or per-component.
 
 ## Contributing
 

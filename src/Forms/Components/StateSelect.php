@@ -6,7 +6,6 @@ use Closure;
 use Filament\Forms\Components\Select;
 use Filament\Schemas\Components\Utilities\Get;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Validation\Rule;
 use InvalidArgumentException;
 use Xentixar\WorkflowManager\Contracts\WorkflowsContract;
@@ -21,6 +20,10 @@ class StateSelect extends Select
 
     protected ?string $role = null;
 
+    protected array $ignoredActions = [];
+
+    protected bool $hasManuallySetIgnoredActions = false;
+
     public static function make(?string $name = 'status'): static
     {
         $static = parent::make($name)->label('Status');
@@ -29,7 +32,7 @@ class StateSelect extends Select
             ->selectablePlaceholder(false)
             ->options(fn($get) => self::resolveOptions($static->getWorkflowModel(), $static->getRole()))
             ->disableOptionWhen(function (string $value, Get $get, ?Model $record, $operation) use ($static, $name) {
-                if (in_array($operation, config('workflow-manager.ignored_actions', []))) {
+                if (in_array($operation, $static->hasManuallySetIgnoredActions ? $static->getIgnoredActions() : config('workflow-manager.ignored_actions', []))) {
                     return false;
                 }
                 
@@ -87,7 +90,7 @@ class StateSelect extends Select
         parent::setUp();
 
         $this->rule(function (Get $get, ?Model $record, $operation) {
-            if (in_array($operation, config('workflow-manager.ignored_actions', []))) {
+            if (in_array($operation, $this->hasManuallySetIgnoredActions ? $this->getIgnoredActions() : config('workflow-manager.ignored_actions', []))) {
                 return [];
             }
 
@@ -197,5 +200,17 @@ class StateSelect extends Select
             ->first();
 
         return ! $targetState || ! in_array($targetState->id, $acceptedStateIds);
+    }
+
+    public function setIgnoredActions(array $actions, bool $override = false): static
+    {
+        $this->ignoredActions = $override ? $actions : array_unique(array_merge($this->ignoredActions, $actions));
+        $this->hasManuallySetIgnoredActions = true;
+        return $this;
+    }
+
+    public function getIgnoredActions(): array
+    {
+        return $this->ignoredActions;
     }
 }
