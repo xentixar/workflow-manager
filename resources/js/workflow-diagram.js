@@ -225,5 +225,19 @@ document.addEventListener('alpine:init', () => {
                 this.cy.center();
             }
         },
+
+        downloadImage() {
+            if (!this.cy) return;
+            try {
+                const dataUri = this.cy.png({ full: true, scale: 1 });
+                if (!dataUri) return;
+                const link = document.createElement('a');
+                link.href = dataUri;
+                link.download = 'workflow-diagram.png';
+                link.click();
+            } catch (e) {
+                console.error('Workflow diagram export failed:', e);
+            }
+        },
     }));
 });

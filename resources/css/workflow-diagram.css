@@ -59,11 +59,26 @@
     border-radius: 6px;
     cursor: pointer;
     transition: background 0.15s ease, color 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.workflow-diagram__btn-icon {
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
 }
 
 .workflow-diagram__btn:hover {
     background: #d1d5db;
     color: #1f2937;
+}
+
+.workflow-diagram__btn--link {
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
 }
 
 .workflow-diagram[data-theme="dark"] .workflow-diagram__btn,

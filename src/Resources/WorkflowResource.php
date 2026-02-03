@@ -16,6 +16,7 @@ use Filament\Resources\Pages\Page;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\Width;
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -118,15 +119,23 @@ class WorkflowResource extends Resource
                     ->multiple()
                     ->options(config('workflow-manager.roles', [])),
             ])
+            ->recordUrl(null)
             ->recordActions([
-                Action::make('transitions')
-                    ->label('Transitions')
-                    ->color('info')
-                    ->icon('heroicon-o-arrows-right-left')
-                    ->url(fn(Workflow $record): string => self::getUrl('transitions', ['record' => $record])),
+                Action::make('viewWorkflow')
+                    ->label('View')
+                    ->icon('heroicon-o-eye')
+                    ->color('success')
+                    ->modal()
+                    ->modalWidth(Width::SevenExtraLarge)
+                    ->modalSubmitAction(false)
+                    ->modalHeading('View')
+                    ->modalContent(fn($record) => view('workflow-manager::components.flowchart-diagram', [
+                        'workflow' => $record,
+                    ])),
                 EditAction::make(),
                 DeleteAction::make(),
             ])
+            ->recordAction('viewWorkflow')
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
