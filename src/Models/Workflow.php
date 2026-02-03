@@ -15,13 +15,13 @@ class Workflow extends Model
     protected $fillable = [
         'model_class',
         'workflow_name',
-        'role'
+        'role',
     ];
 
     /**
      * Get the states for the workflow.
      */
-    public function states():HasMany
+    public function states(): HasMany
     {
         return $this->hasMany(WorkflowState::class);
     }

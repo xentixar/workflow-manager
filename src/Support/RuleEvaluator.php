@@ -63,6 +63,7 @@ final class RuleEvaluator
             $conditions = $transition->conditions;
             if ($conditions->isEmpty()) {
                 $allowed[] = $toStateValue;
+
                 continue;
             }
 
@@ -117,6 +118,7 @@ final class RuleEvaluator
             if ($condition->value_type === 'dynamic' && trim((string) $compareValue) === '') {
                 return false;
             }
+
             return self::compareIn($fieldValue, $compareValue);
         }
 
@@ -127,6 +129,7 @@ final class RuleEvaluator
             if ($pattern === null || (is_string($pattern) && trim($pattern) === '')) {
                 return false;
             }
+
             return $operator === 'like'
                 ? self::compareLike($fieldValue, (string) $pattern)
                 : self::compareRegex($fieldValue, (string) $pattern);
@@ -144,6 +147,7 @@ final class RuleEvaluator
         if ($operator === '=' || $operator === '!=') {
             $a = self::normalizeForEquality($fieldValue);
             $b = self::normalizeForEquality($compareValue);
+
             return $operator === '=' ? ($a == $b) : ($a != $b);
         }
 
@@ -193,6 +197,7 @@ final class RuleEvaluator
         if (is_array($v)) {
             return implode(',', $v);
         }
+
         return (string) $v;
     }
 
@@ -214,6 +219,7 @@ final class RuleEvaluator
                 return $value;
             }
         }
+
         return $value;
     }
 
@@ -238,6 +244,7 @@ final class RuleEvaluator
             try {
                 $a = $a instanceof DateTimeInterface ? $a : \Carbon\Carbon::parse($fieldValue);
                 $b = $b instanceof DateTimeInterface ? $b : \Carbon\Carbon::parse($compareValue);
+
                 return $op($a->getTimestamp(), $b->getTimestamp());
             } catch (\Throwable) {
                 // fall through to default comparison
@@ -245,6 +252,7 @@ final class RuleEvaluator
         }
         $a = is_numeric($fieldValue) ? (float) $fieldValue : $fieldValue;
         $b = is_numeric($compareValue) ? (float) $compareValue : $compareValue;
+
         return $op($a, $b);
     }
 
@@ -259,12 +267,14 @@ final class RuleEvaluator
         if ($value instanceof \UnitEnum) {
             return $value->name;
         }
+
         return (string) $value;
     }
 
     private static function compareIn(mixed $fieldValue, string $valueList): bool
     {
         $allowed = array_map('trim', explode(',', $valueList));
+
         return in_array((string) $fieldValue, $allowed, true)
             || in_array($fieldValue, $allowed, false);
     }
@@ -283,7 +293,8 @@ final class RuleEvaluator
         $pattern = str_replace(['%', '_'], ["\x02", "\x03"], $pattern);
         $pattern = preg_quote($pattern, '#');
         $pattern = str_replace(["\x02", "\x03"], ['.*', '.'], $pattern);
-        return (bool) preg_match('#^' . $pattern . '\z#ui', $subject);
+
+        return (bool) preg_match('#^'.$pattern.'\z#ui', $subject);
     }
 
     /**
@@ -296,8 +307,9 @@ final class RuleEvaluator
         if (str_contains($pattern, $delimiter)) {
             $delimiter = '~';
         }
-        $regex = $delimiter . $pattern . $delimiter . 'u';
+        $regex = $delimiter.$pattern.$delimiter.'u';
         $result = @preg_match($regex, $subject);
+
         return $result === 1;
     }
 }

@@ -24,7 +24,7 @@ class WorkflowTransition extends Model
     {
         return $this->belongsTo(Workflow::class);
     }
-    
+
     /**
      * Get the from state that owns the transition.
      */
@@ -32,7 +32,7 @@ class WorkflowTransition extends Model
     {
         return $this->belongsTo(WorkflowState::class, 'from_state_id', 'id');
     }
-    
+
     /**
      * Get the to state that owns the transition.
      */

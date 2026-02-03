@@ -2,9 +2,9 @@
 
 namespace Xentixar\WorkflowManager\Resources\WorkflowResource\Pages;
 
-use Xentixar\WorkflowManager\Resources\WorkflowResource;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
+use Xentixar\WorkflowManager\Resources\WorkflowResource;
 
 class EditWorkflow extends EditRecord
 {

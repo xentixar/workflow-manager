@@ -3,7 +3,6 @@
 namespace Xentixar\WorkflowManager\Policies;
 
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
 use Xentixar\WorkflowManager\Models\Workflow;
 
 class WorkflowPolicy
@@ -13,9 +12,10 @@ class WorkflowPolicy
      */
     public function viewAny(User $user): bool
     {
-        if (!$this->isPolicyEnabled()) {
+        if (! $this->isPolicyEnabled()) {
             return true;
         }
+
         return $user->can(config('workflow-manager.permissions.view_any'));
     }
 
@@ -24,9 +24,10 @@ class WorkflowPolicy
      */
     public function view(User $user, Workflow $workflow): bool
     {
-        if (!$this->isPolicyEnabled()) {
+        if (! $this->isPolicyEnabled()) {
             return true;
         }
+
         return $user->can(config('workflow-manager.permissions.view'));
     }
 
@@ -35,9 +36,10 @@ class WorkflowPolicy
      */
     public function create(User $user): bool
     {
-        if (!$this->isPolicyEnabled()) {
+        if (! $this->isPolicyEnabled()) {
             return true;
         }
+
         return $user->can(config('workflow-manager.permissions.create'));
     }
 
@@ -46,9 +48,10 @@ class WorkflowPolicy
      */
     public function update(User $user, Workflow $workflow): bool
     {
-        if (!$this->isPolicyEnabled()) {
+        if (! $this->isPolicyEnabled()) {
             return true;
         }
+
         return $user->can(config('workflow-manager.permissions.update'));
     }
 
@@ -57,9 +60,10 @@ class WorkflowPolicy
      */
     public function delete(User $user, Workflow $workflow): bool
     {
-        if (!$this->isPolicyEnabled()) {
+        if (! $this->isPolicyEnabled()) {
             return true;
         }
+
         return $user->can(config('workflow-manager.permissions.delete'));
     }
 
@@ -68,9 +72,10 @@ class WorkflowPolicy
      */
     public function restore(User $user, Workflow $workflow): bool
     {
-        if (!$this->isPolicyEnabled()) {
+        if (! $this->isPolicyEnabled()) {
             return true;
         }
+
         return $user->can(config('workflow-manager.permissions.restore'));
     }
 
@@ -79,9 +84,10 @@ class WorkflowPolicy
      */
     public function forceDelete(User $user, Workflow $workflow): bool
     {
-        if (!$this->isPolicyEnabled()) {
+        if (! $this->isPolicyEnabled()) {
             return true;
         }
+
         return $user->can(config('workflow-manager.permissions.force_delete'));
     }
 
@@ -90,9 +96,10 @@ class WorkflowPolicy
      */
     public function reorder(User $user): bool
     {
-        if (!$this->isPolicyEnabled()) {
+        if (! $this->isPolicyEnabled()) {
             return true;
         }
+
         return $user->can(config('workflow-manager.permissions.reorder'));
     }
 
@@ -101,9 +108,10 @@ class WorkflowPolicy
      */
     public function replicate(User $user): bool
     {
-        if (!$this->isPolicyEnabled()) {
+        if (! $this->isPolicyEnabled()) {
             return true;
         }
+
         return $user->can(config('workflow-manager.permissions.replicate'));
     }
 

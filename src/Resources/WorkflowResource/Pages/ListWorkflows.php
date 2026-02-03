@@ -2,9 +2,9 @@
 
 namespace Xentixar\WorkflowManager\Resources\WorkflowResource\Pages;
 
-use Xentixar\WorkflowManager\Resources\WorkflowResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
+use Xentixar\WorkflowManager\Resources\WorkflowResource;
 
 class ListWorkflows extends ListRecords
 {
@@ -14,7 +14,7 @@ class ListWorkflows extends ListRecords
     {
         return [
             Actions\CreateAction::make()
-                ->icon('heroicon-o-plus')
+                ->icon('heroicon-o-plus'),
         ];
     }
 }

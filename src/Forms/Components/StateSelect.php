@@ -2,7 +2,6 @@
 
 namespace Xentixar\WorkflowManager\Forms\Components;
 
-use Closure;
 use Filament\Forms\Components\Select;
 use Filament\Schemas\Components\Utilities\Get;
 use Illuminate\Database\Eloquent\Model;
@@ -10,8 +9,8 @@ use Illuminate\Validation\Rule;
 use InvalidArgumentException;
 use Xentixar\WorkflowManager\Contracts\WorkflowsContract;
 use Xentixar\WorkflowManager\Models\Workflow;
-use Xentixar\WorkflowManager\Models\WorkflowTransition;
 use Xentixar\WorkflowManager\Models\WorkflowState;
+use Xentixar\WorkflowManager\Models\WorkflowTransition;
 use Xentixar\WorkflowManager\Support\Helper;
 use Xentixar\WorkflowManager\Support\RuleEvaluator;
 
@@ -31,12 +30,12 @@ class StateSelect extends Select
 
         return $static
             ->selectablePlaceholder(false)
-            ->options(fn($get) => self::resolveOptions($static->getWorkflowModel(), $static->getRole()))
+            ->options(fn ($get) => self::resolveOptions($static->getWorkflowModel(), $static->getRole()))
             ->disableOptionWhen(function (string $value, Get $get, ?Model $record, $operation) use ($static, $name) {
                 if (in_array($operation, $static->hasManuallySetIgnoredActions ? $static->getIgnoredActions() : config('workflow-manager.ignored_actions', []))) {
                     return false;
                 }
-                
+
                 $workflowModel = $static->getWorkflowModel();
                 $role = $static->getRole();
                 $currentState = $name ? $record?->getAttribute($name) : null;
@@ -54,8 +53,9 @@ class StateSelect extends Select
 
     /**
      * Set the model class that uses the Workflows trait.
-     * 
-     * @param class-string $model
+     *
+     * @param  class-string  $model
+     *
      * @throws InvalidArgumentException
      */
     public function setWorkflowForModel(string $model): static
@@ -103,7 +103,6 @@ class StateSelect extends Select
             if (! $workflowModel || ! $role || ! $currentState) {
                 return [];
             }
-
 
             if (is_object($currentState) && enum_exists(get_class($currentState))) {
                 $currentState = $currentState->value; // @phpstan-ignore-line
@@ -243,6 +242,7 @@ class StateSelect extends Select
     {
         $this->ignoredActions = $override ? $actions : array_unique(array_merge($this->ignoredActions, $actions));
         $this->hasManuallySetIgnoredActions = true;
+
         return $this;
     }
 

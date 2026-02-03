@@ -9,7 +9,6 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
-use Xentixar\WorkflowManager\Resources\WorkflowResource\Pages;
 use Filament\Pages\Enums\SubNavigationPosition;
 use Filament\Panel;
 use Filament\Resources\Pages\Page;
@@ -17,11 +16,11 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\Enums\Width;
-use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Xentixar\WorkflowManager\Models\Workflow;
+use Xentixar\WorkflowManager\Resources\WorkflowResource\Pages;
 use Xentixar\WorkflowManager\Support\Helper;
 
 class WorkflowResource extends Resource
@@ -78,7 +77,7 @@ class WorkflowResource extends Resource
                     ->options(config('workflow-manager.roles'))
                     ->unique(
                         ignoreRecord: true,
-                        modifyRuleUsing: fn($rule, Get $get) => $rule
+                        modifyRuleUsing: fn ($rule, Get $get) => $rule
                             ->where('model_class', $get('model_class')),
                     )
                     ->validationMessages([
@@ -86,7 +85,6 @@ class WorkflowResource extends Resource
                     ]),
             ]);
     }
-
 
     public static function table(Table $table): Table
     {
@@ -96,13 +94,13 @@ class WorkflowResource extends Resource
                     ->searchable()
                     ->label('Name'),
                 TextColumn::make('model_class')
-                    ->formatStateUsing(fn($state) => class_basename($state))
+                    ->formatStateUsing(fn ($state) => class_basename($state))
                     ->badge()
                     ->searchable()
                     ->label('Model'),
                 TextColumn::make('role')
                     ->badge()
-                    ->formatStateUsing(fn($state) => config('workflow-manager.roles')[$state] ?? $state)
+                    ->formatStateUsing(fn ($state) => config('workflow-manager.roles')[$state] ?? $state)
                     ->color('success')
                     ->searchable()
                     ->label('Role'),
@@ -129,7 +127,7 @@ class WorkflowResource extends Resource
                     ->modalWidth(Width::SevenExtraLarge)
                     ->modalSubmitAction(false)
                     ->modalHeading('View')
-                    ->modalContent(fn($record) => view('workflow-manager::components.flowchart-diagram', [
+                    ->modalContent(fn ($record) => view('workflow-manager::components.flowchart-diagram', [
                         'workflow' => $record,
                     ])),
                 EditAction::make(),

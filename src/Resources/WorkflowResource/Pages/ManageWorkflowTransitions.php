@@ -14,7 +14,6 @@ use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Pages\ManageRelatedRecords;
-use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Wizard;
 use Filament\Schemas\Components\Wizard\Step;
@@ -44,7 +43,7 @@ class ManageWorkflowTransitions extends ManageRelatedRecords
                 TextColumn::make('fromState.label')
                     ->searchable()
                     ->badge(true)
-                    ->color(fn($state) => $state !== '*' ? 'success' : 'info')
+                    ->color(fn ($state) => $state !== '*' ? 'success' : 'info')
                     ->default('*')
                     ->label('From State'),
                 TextColumn::make('toState.label')
@@ -53,7 +52,7 @@ class ManageWorkflowTransitions extends ManageRelatedRecords
                     ->searchable()
                     ->label('To State'),
             ])
-            ->modifyQueryUsing(fn($query) => $query->with('conditions'))
+            ->modifyQueryUsing(fn ($query) => $query->with('conditions'))
             ->filters([
                 //
             ])
@@ -66,7 +65,7 @@ class ManageWorkflowTransitions extends ManageRelatedRecords
                     ->modalWidth(Width::SevenExtraLarge)
                     ->modalSubmitAction(false)
                     ->modalHeading('View Workflow')
-                    ->modalContent(fn() => view('workflow-manager::components.flowchart-diagram', [
+                    ->modalContent(fn () => view('workflow-manager::components.flowchart-diagram', [
                         'workflow' => $this->getOwnerRecord(),
                     ])),
                 CreateAction::make()
@@ -85,8 +84,9 @@ class ManageWorkflowTransitions extends ManageRelatedRecords
                                 ['order' => $i]
                             ));
                         }
+
                         return $transition;
-                    })
+                    }),
             ])
             ->recordActions([
                 Action::make('editConditions')
@@ -96,19 +96,20 @@ class ManageWorkflowTransitions extends ManageRelatedRecords
                     ->modalHeading('Edit conditions')
                     ->modalDescription('Update when this transition is allowed. Order matters: each condition combines with the previous using its Logical Group (AND/OR).')
                     ->modalWidth(Width::FiveExtraLarge)
-                    ->schema(fn(): array => [
+                    ->schema(fn (): array => [
                         Repeater::make('conditions')
                             ->label('Conditions')
                             ->schema($this->conditionSchema($this->getOwnerRecord()->model_class ?? ''))
                             ->columns(2)
                             ->collapsible()
-                            ->itemLabel(fn(array $state) => ($state['field'] ?? '') . ' ' . ($state['operator'] ?? '') . ' ' . ($state['value'] ?? ''))
+                            ->itemLabel(fn (array $state) => ($state['field'] ?? '').' '.($state['operator'] ?? '').' '.($state['value'] ?? ''))
                             ->addActionLabel('Add condition'),
                     ])
                     ->fillForm(function ($record): array {
                         $record->load('conditions');
+
                         return [
-                            'conditions' => $record->conditions->map(fn($c) => $c->only(['field', 'operator', 'value', 'value_type', 'logical_group', 'base_field']))->toArray(),
+                            'conditions' => $record->conditions->map(fn ($c) => $c->only(['field', 'operator', 'value', 'value_type', 'logical_group', 'base_field']))->toArray(),
                         ];
                     })
                     ->action(function ($record, array $data): void {
@@ -120,15 +121,16 @@ class ManageWorkflowTransitions extends ManageRelatedRecords
                     ->modalWidth(Width::SevenExtraLarge)
                     ->fillForm(function ($record) {
                         $record->load('conditions');
+
                         return array_merge(
                             $record->only(['from_state_id', 'to_state_id']),
-                            ['conditions' => $record->conditions->map(fn($c) => $c->only(['field', 'operator', 'value', 'value_type', 'logical_group', 'base_field']))->toArray()]
+                            ['conditions' => $record->conditions->map(fn ($c) => $c->only(['field', 'operator', 'value', 'value_type', 'logical_group', 'base_field']))->toArray()]
                         );
                     })
                     ->after(function ($record, array $data) {
                         $this->syncTransitionConditions($record, Arr::get($data, 'conditions', []));
                     }),
-                DeleteAction::make()
+                DeleteAction::make(),
             ])
             ->recordAction('edit')
             ->toolbarActions([
@@ -165,7 +167,7 @@ class ManageWorkflowTransitions extends ManageRelatedRecords
                                 ->searchable()
                                 ->required()
                                 ->rules([
-                                    fn(Get $get, $record): Closure => function (string $attribute, $value, Closure $fail) use ($get, $record) {
+                                    fn (Get $get, $record): Closure => function (string $attribute, $value, Closure $fail) use ($get, $record) {
                                         $fromStateId = $get('from_state_id') ?? null;
                                         $toStateId = $value;
                                         $workflow = $this->getOwnerRecord();
@@ -203,7 +205,7 @@ class ManageWorkflowTransitions extends ManageRelatedRecords
                                 ->schema($this->conditionSchema($modelClass))
                                 ->columns(2)
                                 ->collapsible()
-                                ->itemLabel(fn(array $state) => ($state['field'] ?? '') . ' ' . ($state['operator'] ?? '') . ' ' . ($state['value'] ?? ''))
+                                ->itemLabel(fn (array $state) => ($state['field'] ?? '').' '.($state['operator'] ?? '').' '.($state['value'] ?? ''))
                                 ->addActionLabel('Add condition'),
                         ]),
                 ]),
@@ -248,7 +250,7 @@ class ManageWorkflowTransitions extends ManageRelatedRecords
             Select::make('field')
                 ->required()
                 ->label('Field')
-                ->options(fn() => Helper::getFillableFieldsForModel($modelClass))
+                ->options(fn () => Helper::getFillableFieldsForModel($modelClass))
                 ->searchable(),
             Select::make('operator')
                 ->required()
@@ -266,8 +268,8 @@ class ManageWorkflowTransitions extends ManageRelatedRecords
                 ]),
             TextInput::make('value')
                 ->label('Value')
-                ->required(fn($get) => $get('value_type') === 'static')
-                ->visible(fn($get) => $get('value_type') === 'static'),
+                ->required(fn ($get) => $get('value_type') === 'static')
+                ->visible(fn ($get) => $get('value_type') === 'static'),
             Select::make('value_type')
                 ->live()
                 ->default('static')
@@ -278,11 +280,11 @@ class ManageWorkflowTransitions extends ManageRelatedRecords
                 ]),
             Select::make('base_field')
                 ->label('Compare with column/relation')
-                ->options(fn() => Helper::getFillableFieldsForModel($modelClass))
+                ->options(fn () => Helper::getFillableFieldsForModel($modelClass))
                 ->searchable()
-                ->required(fn($get) => $get('value_type') === 'dynamic')
+                ->required(fn ($get) => $get('value_type') === 'dynamic')
                 ->columnSpanFull()
-                ->visible(fn($get) => $get('value_type') === 'dynamic')
+                ->visible(fn ($get) => $get('value_type') === 'dynamic')
                 ->hint('Dot notation supported (e.g. user.department).'),
             Select::make('logical_group')
                 ->default('AND')

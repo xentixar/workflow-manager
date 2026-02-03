@@ -31,22 +31,22 @@ class WorkflowManagerServiceProvider extends PackageServiceProvider
     {
         parent::boot();
 
-        $this->loadMigrationsFrom(__DIR__ . '/../database/migrations');
+        $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
 
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'workflow-manager');
 
         $this->publishes([
-            __DIR__ . '/../config/workflow-manager.php' => config_path('workflow-manager.php'),
+            __DIR__.'/../config/workflow-manager.php' => config_path('workflow-manager.php'),
         ], 'workflow-manager-config');
 
         $this->publishes([
-            __DIR__ . '/../database/migrations/' => database_path('migrations'),
+            __DIR__.'/../database/migrations/' => database_path('migrations'),
         ], 'workflow-manager-migrations');
 
         FilamentAsset::register([
-            Css::make('workflow-diagram', __DIR__ . '/../resources/css/workflow-diagram.css'),
-            Js::make('cytoscape', __DIR__ . '/../resources/js/cytoscape.js'),
-            Js::make('workflow-diagram', __DIR__ . '/../resources/js/workflow-diagram.js'),
+            Css::make('workflow-diagram', __DIR__.'/../resources/css/workflow-diagram.css'),
+            Js::make('cytoscape', __DIR__.'/../resources/js/cytoscape.js'),
+            Js::make('workflow-diagram', __DIR__.'/../resources/js/workflow-diagram.js'),
         ]);
     }
 }

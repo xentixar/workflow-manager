@@ -9,8 +9,6 @@ trait HasWorkflows
 {
     /**
      * Get the workflows for the model.
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
     public function workflows(): HasMany
     {

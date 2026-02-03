@@ -35,7 +35,7 @@ class ManageWorkflowStates extends ManageRelatedRecords
                     ->searchable()
                     ->badge(),
                 TextColumn::make('label')
-                    ->searchable()
+                    ->searchable(),
             ])
             ->filters([
                 //
@@ -44,16 +44,16 @@ class ManageWorkflowStates extends ManageRelatedRecords
                 CreateAction::make()
                     ->label('Add State')
                     ->icon('heroicon-o-plus')
-                    ->createAnother(false)
+                    ->createAnother(false),
             ])
             ->recordActions([
                 EditAction::make(),
-                DeleteAction::make()
+                DeleteAction::make(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
-                ])
+                ]),
             ]);
     }
 
@@ -63,7 +63,7 @@ class ManageWorkflowStates extends ManageRelatedRecords
             ->components([
                 TextInput::make('state')
                     ->unique(
-                        modifyRuleUsing: fn($rule) => $rule->where('workflow_id', $this->getOwnerRecord()->id),
+                        modifyRuleUsing: fn ($rule) => $rule->where('workflow_id', $this->getOwnerRecord()->id),
                         ignoreRecord: true
                     )
                     ->required()

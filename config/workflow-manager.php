@@ -39,7 +39,7 @@ return [
     'navigation' => [
         'label' => 'State Workflows',
         'group' => 'Settings',
-        'sort' => "1",
+        'sort' => '1',
         'icon' => 'heroicon-o-arrows-right-left',
         'slug' => 'workflows',
     ],

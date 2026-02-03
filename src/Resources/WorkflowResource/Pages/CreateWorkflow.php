@@ -5,7 +5,6 @@ namespace Xentixar\WorkflowManager\Resources\WorkflowResource\Pages;
 use Exception;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
-use Illuminate\Database\Eloquent\Relations\Relation;
 use Xentixar\WorkflowManager\Models\Workflow;
 use Xentixar\WorkflowManager\Models\WorkflowState;
 use Xentixar\WorkflowManager\Resources\WorkflowResource;
