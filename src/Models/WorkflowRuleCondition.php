@@ -13,8 +13,8 @@ class WorkflowRuleCondition extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        'workflow_rule_id',
         'workflow_transition_id',
+        'order',
         'field',
         'operator',
         'value',
@@ -24,15 +24,7 @@ class WorkflowRuleCondition extends Model
     ];
 
     /**
-     * Get the workflow rule that owns the condition (global rules only).
-     */
-    public function workflowRule(): BelongsTo
-    {
-        return $this->belongsTo(WorkflowRule::class);
-    }
-
-    /**
-     * Get the transition this condition belongs to (transition-based conditions).
+     * Get the transition this condition belongs to.
      */
     public function workflowTransition(): BelongsTo
     {

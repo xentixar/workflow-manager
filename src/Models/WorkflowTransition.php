@@ -42,18 +42,10 @@ class WorkflowTransition extends Model
     }
 
     /**
-     * Get the rules bound to this transition (legacy; prefer conditions()).
-     */
-    public function rules()
-    {
-        return $this->hasMany(WorkflowRule::class, 'workflow_transition_id');
-    }
-
-    /**
      * Get the conditions for this transition (evaluated when taking this transition).
      */
     public function conditions()
     {
-        return $this->hasMany(WorkflowRuleCondition::class, 'workflow_transition_id');
+        return $this->hasMany(WorkflowRuleCondition::class, 'workflow_transition_id')->orderBy('order');
     }
 }

@@ -4,8 +4,6 @@ namespace Xentixar\WorkflowManager\Support;
 
 use Illuminate\Database\Eloquent\Model;
 use Xentixar\WorkflowManager\Models\Workflow;
-use Xentixar\WorkflowManager\Models\WorkflowRule;
-use Xentixar\WorkflowManager\Models\WorkflowRuleAction;
 use Xentixar\WorkflowManager\Models\WorkflowRuleCondition;
 use Xentixar\WorkflowManager\Models\WorkflowState;
 use Xentixar\WorkflowManager\Models\WorkflowTransition;
@@ -13,9 +11,9 @@ use Xentixar\WorkflowManager\Models\WorkflowTransition;
 final class RuleEvaluator
 {
     /**
-     * Get the list of state names (strings) that are allowed as "to" state by rules
+     * Get the list of state names (strings) that are allowed as "to" state
      * for the given workflow, record, and current state.
-     * Rules can be bound to each transition (workflow_transition_id) or legacy workflow-level (actions).
+     * Only transition-level conditions are evaluated.
      *
      * @return array<int, string>
      */
@@ -40,26 +38,7 @@ final class RuleEvaluator
             ->with(['toState', 'conditions'])
             ->get();
 
-        $hasTransitionConditions = $transitionsFromCurrent->contains(
-            fn (WorkflowTransition $t) => $t->conditions->isNotEmpty()
-        );
-
-        if ($hasTransitionConditions) {
-            return self::evaluatePerTransition($transitionsFromCurrent, $record);
-        }
-
-        $workflowLevelRules = $workflow->rules()
-            ->whereNull('workflow_transition_id')
-            ->where('is_active', true)
-            ->orderBy('priority')
-            ->with(['conditions', 'actions'])
-            ->get();
-
-        if ($workflowLevelRules->isNotEmpty()) {
-            return self::evaluateWorkflowLevelRules($workflowLevelRules, $record, $currentStateValue);
-        }
-
-        return [];
+        return self::evaluatePerTransition($transitionsFromCurrent, $record);
     }
 
     /**
@@ -93,7 +72,10 @@ final class RuleEvaluator
     }
 
     /**
-     * Evaluate a collection of conditions (e.g. on a transition); combine with first condition's logical_group.
+     * Evaluate a collection of conditions in order.
+     * Sequence matters: result starts as the first condition's result; each next condition
+     * is combined with the current result using that condition's logical_group (AND or OR).
+     * E.g. c1 AND c2 OR c3 => (c1 AND c2) OR c3.
      */
     private static function evaluateConditionCollection($conditions, Model $record): bool
     {
@@ -101,51 +83,18 @@ final class RuleEvaluator
             return true;
         }
 
-        $results = $conditions->map(fn (WorkflowRuleCondition $c) => self::evaluateCondition($c, $record));
-        $logicalGroup = strtoupper($conditions->first()?->logical_group ?? 'AND');
+        $result = self::evaluateCondition($conditions->first(), $record);
 
-        return $logicalGroup === 'OR'
-            ? $results->contains(true)
-            : $results->every(fn ($r) => $r === true);
-    }
+        foreach ($conditions->slice(1) as $condition) {
+            $nextResult = self::evaluateCondition($condition, $record);
+            $op = strtoupper($condition->logical_group ?? 'AND');
 
-    /**
-     * Legacy: first matching workflow-level rule returns its action to_states for current state.
-     *
-     * @param  \Illuminate\Support\Collection<int, WorkflowRule>  $rules
-     * @return array<int, string>
-     */
-    private static function evaluateWorkflowLevelRules($rules, Model $record, string $currentStateValue): array
-    {
-        foreach ($rules as $rule) {
-            if (self::evaluateConditions($rule, $record)) {
-                return self::getToStatesForCurrentState($rule, $currentStateValue);
-            }
+            $result = $op === 'OR'
+                ? ($result || $nextResult)
+                : ($result && $nextResult);
         }
 
-        return [];
-    }
-
-    /**
-     * Evaluate all conditions of a rule against the record.
-     * Conditions are combined using the rule's logical_group (AND/OR).
-     * Field supports dot notation for relationships (e.g. user.department, budget.amount).
-     */
-    private static function evaluateConditions(WorkflowRule $rule, Model $record): bool
-    {
-        $conditions = $rule->conditions;
-
-        if ($conditions->isEmpty()) {
-            return true;
-        }
-
-        $results = $conditions->map(fn (WorkflowRuleCondition $c) => self::evaluateCondition($c, $record));
-
-        $logicalGroup = strtoupper($conditions->first()?->logical_group ?? 'AND');
-
-        return $logicalGroup === 'OR'
-            ? $results->contains(true)
-            : $results->every(fn ($r) => $r === true);
+        return $result;
     }
 
     /**
@@ -237,20 +186,5 @@ final class RuleEvaluator
         $allowed = array_map('trim', explode(',', $valueList));
         return in_array((string) $fieldValue, $allowed, true)
             || in_array($fieldValue, $allowed, false);
-    }
-
-    /**
-     * Get to_state values from the rule's actions where from_state matches current state.
-     *
-     * @return array<int, string>
-     */
-    private static function getToStatesForCurrentState(WorkflowRule $rule, string $currentStateValue): array
-    {
-        return $rule->actions
-            ->where('from_state', $currentStateValue)
-            ->pluck('to_state')
-            ->unique()
-            ->values()
-            ->all();
     }
 }

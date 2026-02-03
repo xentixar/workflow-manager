@@ -1,83 +1,96 @@
 @php
-    $states = $workflow->states()->get()->keyBy('id');
-    $transitions = $workflow->transitions()->with(['fromState', 'toState'])->get();
+    $transitions = $workflow->transitions()->with(['fromState', 'toState', 'conditions'])->get();
     $includeParent = config('workflow-manager.include_parent', false);
 
-    $nodeLabels = [];
-    $transitionLines = [];
+    $conditionLine = function ($c) {
+        $line = $c->field . ' ' . $c->operator . ' ' . $c->value;
+        if ($c->value_type === 'percentage') {
+            $line .= '%' . ($c->base_field ? ' of ' . $c->base_field : '');
+        }
+        return $line;
+    };
+
+    $nodes = [];
+    $edges = [];
+    $seenStates = [];
 
     foreach ($transitions as $transition) {
         $toState = $transition->toState;
         $fromState = $transition->fromState;
 
-        if ($toState) {
-            $toKey = 'state_' . str_replace([' ', '-'], '_', $toState->state);
-            $toLabel = $toState->label ?? $toState->state;
-            $nodeLabels[$toKey] = $toLabel;
+        if (! $toState) {
+            continue;
+        }
 
-            if ($fromState) {
-                $fromKey = 'state_' . str_replace([' ', '-'], '_', $fromState->state);
-                $fromLabel = $fromState->label ?? $fromState->state;
-                $nodeLabels[$fromKey] = $fromLabel;
+        $toKey = 'state_' . $toState->id;
+        $toLabel = $toState->label ?? $toState->state;
+        if (! isset($seenStates[$toKey])) {
+            $seenStates[$toKey] = true;
+            $nodes[] = ['id' => $toKey, 'label' => $toLabel, 'type' => 'state'];
+        }
 
-                // Forward transition (normal arrow)
-                $transitionLines[] = $fromKey . ' --> ' . $toKey;
-                
-                // Reverse transition (if include_parent is enabled)
-                if ($includeParent) {
-                    $transitionLines[] = $toKey . ' -.-> ' . $fromKey;
-                }
-            } else {
-                $transitionLines[] = 'start((Start)) --> ' . $toKey;
+        if ($fromState) {
+            $fromKey = 'state_' . $fromState->id;
+            $fromLabel = $fromState->label ?? $fromState->state;
+            if (! isset($seenStates[$fromKey])) {
+                $seenStates[$fromKey] = true;
+                $nodes[] = ['id' => $fromKey, 'label' => $fromLabel, 'type' => 'state'];
             }
+
+            $conditions = $transition->conditions;
+            if ($conditions->isNotEmpty()) {
+                $prevKey = $fromKey;
+                foreach ($conditions as $i => $c) {
+                    $edgeLabel = $i === 0 ? null : strtoupper($c->logical_group ?? 'AND');
+                    $condLabel = $conditionLine($c);
+                    $condKey = 'cond_' . $transition->id . '_' . $i;
+                    $nodes[] = [
+                        'id' => $condKey,
+                        'label' => $condLabel,
+                        'type' => 'condition',
+                    ];
+                    $edges[] = [
+                        'source' => $prevKey,
+                        'target' => $condKey,
+                        'edgeLabel' => $edgeLabel,
+                    ];
+                    $prevKey = $condKey;
+                }
+                $edges[] = ['source' => $prevKey, 'target' => $toKey, 'edgeLabel' => null];
+            } else {
+                $edges[] = ['source' => $fromKey, 'target' => $toKey, 'edgeLabel' => null];
+            }
+
+            if ($includeParent) {
+                $edges[] = ['source' => $toKey, 'target' => $fromKey, 'reverse' => true, 'edgeLabel' => null];
+            }
+        } else {
+            $startId = 'start';
+            if (! isset($seenStates[$startId])) {
+                $seenStates[$startId] = true;
+                $nodes[] = ['id' => $startId, 'label' => 'Start', 'type' => 'start'];
+            }
+            $edges[] = ['source' => $startId, 'target' => $toKey, 'edgeLabel' => null];
         }
     }
 
-    $mermaidCode = "graph TD\n";
-    foreach ($nodeLabels as $key => $label) {
-        $labelEscaped = addslashes($label);
-        $mermaidCode .= $key . '["' . $labelEscaped . "\"]\n";
-    }
-    foreach ($transitionLines as $line) {
-        $mermaidCode .= $line . "\n";
-    }
+    $graphData = ['nodes' => array_values($nodes), 'edges' => $edges];
 @endphp
 
-<div 
-    x-data="{
-        diagramCode: '',
-        isRendered: false,
-        init(code) {
-            this.diagramCode = code;
-            this.renderDiagram();
-        },
-        renderDiagram() {
-            if (this.isRendered) return;
-
-            if (typeof mermaid !== 'undefined') {
-                mermaid.initialize({
-                    startOnLoad: false,
-                    theme: 'neutral',
-                    securityLevel: 'loose'
-                });
-
-                mermaid.render('workflow-diagram', this.diagramCode)
-                    .then(({ svg }) => {
-                        this.$refs.diagramContainer.innerHTML = svg;
-                        this.isRendered = true;
-                    })
-                    .catch(error => {
-                        console.error('Failed to render diagram:', error);
-                        this.$refs.diagramContainer.innerHTML = '<div class=\'p-4 text-red-500 font-medium\'>Failed to render workflow diagram</div>';
-                    });
-            } else {
-                console.error('Mermaid library not loaded');
-                this.$refs.diagramContainer.innerHTML = '<div class=\'p-4 text-red-500 font-medium\'>Mermaid library not loaded</div>';
-            }
-        }
-    }"
-    x-init="init(@js($mermaidCode))"
-    class="flex flex-col items-center justify-center p-4"
+<div
+    x-data="workflowDiagram(@js($graphData))"
+    x-init="mount()"
+    class="workflow-diagram"
 >
-    <div x-ref="diagramContainer" class="w-full flex justify-center"></div>
+    <div class="workflow-diagram__header">
+        <span class="workflow-diagram__title">Workflow diagram</span>
+        <div class="workflow-diagram__toolbar">
+            <button type="button" @click="fit()" class="workflow-diagram__btn">Fit</button>
+            <button type="button" @click="resetZoom()" class="workflow-diagram__btn">Reset zoom</button>
+        </div>
+    </div>
+    <div x-ref="container" class="workflow-diagram__canvas"></div>
+    <div class="workflow-diagram__footer">
+        States (blue) · Conditions (orange) · Edges show AND/OR · Drag to pan, scroll to zoom
+    </div>
 </div>

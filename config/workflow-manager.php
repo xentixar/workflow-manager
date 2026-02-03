@@ -75,11 +75,10 @@ return [
 
     /**
      * --------------------------------------------------------------------------
-     * Rules (Business rules & conditional routing)
+     * Transition conditions (conditional routing)
      * --------------------------------------------------------------------------
-     * When true, the optional rules layer is enabled. Workflows can define rules
-     * that evaluate model data to filter or suggest the next allowed transition.
-     * When false, rule evaluation is skipped and behavior is unchanged.
+     * When true, transition-level conditions are evaluated against model data
+     * to filter the next allowed states. When false, all transitions are allowed.
      */
     'rules_enabled' => true,
 ];

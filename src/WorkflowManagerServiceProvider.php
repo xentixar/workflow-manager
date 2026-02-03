@@ -2,6 +2,7 @@
 
 namespace Xentixar\WorkflowManager;
 
+use Filament\Support\Assets\Css;
 use Filament\Support\Assets\Js;
 use Filament\Support\Facades\FilamentAsset;
 use Spatie\LaravelPackageTools\Commands\InstallCommand;
@@ -43,7 +44,9 @@ class WorkflowManagerServiceProvider extends PackageServiceProvider
         ], 'workflow-manager-migrations');
 
         FilamentAsset::register([
-            Js::make('mermaid', __DIR__ . '/../resources/js/mermaid.js'),
+            Css::make('workflow-diagram', __DIR__ . '/../resources/css/workflow-diagram.css'),
+            Js::make('cytoscape', __DIR__ . '/../resources/js/cytoscape.js'),
+            Js::make('workflow-diagram', __DIR__ . '/../resources/js/workflow-diagram.js'),
         ]);
     }
 }

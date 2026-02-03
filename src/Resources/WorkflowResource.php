@@ -124,11 +124,6 @@ class WorkflowResource extends Resource
                     ->color('info')
                     ->icon('heroicon-o-arrows-right-left')
                     ->url(fn(Workflow $record): string => self::getUrl('transitions', ['record' => $record])),
-                Action::make('rules')
-                    ->label('Rules')
-                    ->color('warning')
-                    ->icon('heroicon-o-document-magnifying-glass')
-                    ->url(fn(Workflow $record): string => self::getUrl('rules', ['record' => $record])),
                 EditAction::make(),
                 DeleteAction::make(),
             ])
@@ -155,7 +150,6 @@ class WorkflowResource extends Resource
             'edit' => Pages\EditWorkflow::class,
             'states' => Pages\ManageWorkflowStates::class,
             'transitions' => Pages\ManageWorkflowTransitions::class,
-            'rules' => Pages\ManageWorkflowRules::class,
         ]);
     }
 
@@ -167,7 +161,6 @@ class WorkflowResource extends Resource
             'edit' => Pages\EditWorkflow::route('/{record}/edit'),
             'transitions' => Pages\ManageWorkflowTransitions::route('/{record}/transitions'),
             'states' => Pages\ManageWorkflowStates::route('/{record}/states'),
-            'rules' => Pages\ManageWorkflowRules::route('/{record}/rules'),
         ];
     }
 }

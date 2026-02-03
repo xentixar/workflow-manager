@@ -16,10 +16,14 @@ use Filament\Forms\Components\TextInput;
 use Filament\Resources\Pages\ManageRelatedRecords;
 use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Wizard;
+use Filament\Schemas\Components\Wizard\Step;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\Width;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Support\Arr;
+use Xentixar\WorkflowManager\Models\WorkflowTransition;
 use Xentixar\WorkflowManager\Resources\WorkflowResource;
 use Xentixar\WorkflowManager\Support\Helper;
 
@@ -49,7 +53,7 @@ class ManageWorkflowTransitions extends ManageRelatedRecords
                     ->searchable()
                     ->label('To State'),
             ])
-            ->modifyQueryUsing(fn ($query) => $query->with('conditions'))
+            ->modifyQueryUsing(fn($query) => $query->with('conditions'))
             ->filters([
                 //
             ])
@@ -59,6 +63,7 @@ class ManageWorkflowTransitions extends ManageRelatedRecords
                     ->icon('heroicon-o-eye')
                     ->color('success')
                     ->modal()
+                    ->modalWidth(Width::SevenExtraLarge)
                     ->modalSubmitAction(false)
                     ->modalHeading('View Workflow')
                     ->modalContent(fn() => view('workflow-manager::components.flowchart-diagram', [
@@ -67,37 +72,65 @@ class ManageWorkflowTransitions extends ManageRelatedRecords
                 CreateAction::make()
                     ->label('Add Transition')
                     ->icon('heroicon-o-plus')
+                    ->modalWidth(Width::SevenExtraLarge)
                     ->modalHeading('Add Transition')
                     ->modalDescription('Add a new transition to the workflow. Optionally add conditions so this transition is only allowed when they pass.')
                     ->createAnother(false)
                     ->using(function (array $data) {
                         $workflow = $this->getOwnerRecord();
                         $transition = $workflow->transitions()->create(Arr::only($data, ['from_state_id', 'to_state_id']));
-                        foreach (Arr::get($data, 'conditions', []) as $condition) {
-                            $transition->conditions()->create(Arr::only($condition, ['field', 'operator', 'value', 'value_type', 'logical_group', 'base_field']));
+                        foreach (Arr::get($data, 'conditions', []) as $i => $condition) {
+                            $transition->conditions()->create(array_merge(
+                                Arr::only($condition, ['field', 'operator', 'value', 'value_type', 'logical_group', 'base_field']),
+                                ['order' => $i]
+                            ));
                         }
                         return $transition;
                     })
             ])
             ->recordActions([
+                Action::make('editConditions')
+                    ->label('Conditions')
+                    ->icon('heroicon-o-list-bullet')
+                    ->color('success')
+                    ->modalHeading('Edit conditions')
+                    ->modalDescription('Update when this transition is allowed. Order matters: each condition combines with the previous using its Logical Group (AND/OR).')
+                    ->modalWidth(Width::FiveExtraLarge)
+                    ->schema(fn(): array => [
+                        Repeater::make('conditions')
+                            ->label('Conditions')
+                            ->schema($this->conditionSchema($this->getOwnerRecord()->model_class ?? ''))
+                            ->columns(2)
+                            ->collapsible()
+                            ->itemLabel(fn(array $state) => ($state['field'] ?? '') . ' ' . ($state['operator'] ?? '') . ' ' . ($state['value'] ?? ''))
+                            ->addActionLabel('Add condition'),
+                    ])
+                    ->fillForm(function ($record): array {
+                        $record->load('conditions');
+                        return [
+                            'conditions' => $record->conditions->map(fn($c) => $c->only(['field', 'operator', 'value', 'value_type', 'logical_group', 'base_field']))->toArray(),
+                        ];
+                    })
+                    ->action(function ($record, array $data): void {
+                        $this->syncTransitionConditions($record, Arr::get($data, 'conditions', []));
+                    })
+                    ->successNotificationTitle('Conditions updated'),
                 EditAction::make()
                     ->modalHeading('Edit Transition')
-                    ->modalWidth('4xl')
+                    ->modalWidth(Width::SevenExtraLarge)
                     ->fillForm(function ($record) {
                         $record->load('conditions');
                         return array_merge(
                             $record->only(['from_state_id', 'to_state_id']),
-                            ['conditions' => $record->conditions->map(fn ($c) => $c->only(['field', 'operator', 'value', 'value_type', 'logical_group', 'base_field']))->toArray()]
+                            ['conditions' => $record->conditions->map(fn($c) => $c->only(['field', 'operator', 'value', 'value_type', 'logical_group', 'base_field']))->toArray()]
                         );
                     })
                     ->after(function ($record, array $data) {
-                        $record->conditions()->delete();
-                        foreach (Arr::get($data, 'conditions', []) as $condition) {
-                            $record->conditions()->create(Arr::only($condition, ['field', 'operator', 'value', 'value_type', 'logical_group', 'base_field']));
-                        }
+                        $this->syncTransitionConditions($record, Arr::get($data, 'conditions', []));
                     }),
                 DeleteAction::make()
             ])
+            ->recordAction('edit')
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
@@ -112,57 +145,96 @@ class ManageWorkflowTransitions extends ManageRelatedRecords
 
         return $form
             ->components([
-                Select::make('from_state_id')
-                    ->label('From State')
-                    ->options($workflow->states->pluck('label', 'id'))
-                    ->placeholder('Select parent state')
-                    ->searchable()
-                    ->preload()
-                    ->hint('Don\'t select anything if this is the first state')
-                    ->live(),
+                Wizard::make([
+                    Step::make('Transition')
+                        ->label('Transition')
+                        ->description('Choose source and target states')
+                        ->schema([
+                            Select::make('from_state_id')
+                                ->label('From State')
+                                ->options($workflow->states->pluck('label', 'id'))
+                                ->placeholder('Select parent state')
+                                ->searchable()
+                                ->preload()
+                                ->hint('Don\'t select anything if this is the first state')
+                                ->live(),
 
-                Select::make('to_state_id')
-                    ->label('To State')
-                    ->options($workflow->states->pluck('label', 'id'))
-                    ->searchable()
-                    ->required()
-                    ->rules([
-                        fn(Get $get): Closure => function (string $attribute, $value, Closure $fail) use ($get) {
-                            $fromStateId = $get('from_state_id') ?? null;
-                            $toStateId = $value;
-                            $workflow = $this->getOwnerRecord();
+                            Select::make('to_state_id')
+                                ->label('To State')
+                                ->options($workflow->states->pluck('label', 'id'))
+                                ->searchable()
+                                ->required()
+                                ->rules([
+                                    fn(Get $get, $record): Closure => function (string $attribute, $value, Closure $fail) use ($get, $record) {
+                                        $fromStateId = $get('from_state_id') ?? null;
+                                        $toStateId = $value;
+                                        $workflow = $this->getOwnerRecord();
 
-                            if ($fromStateId !== null && $fromStateId == $toStateId) {
-                                $fail('A state cannot have transition to itself.');
-                            }
+                                        if ($fromStateId !== null && $fromStateId == $toStateId) {
+                                            $fail('A state cannot have transition to itself.');
+                                        }
 
-                            if ($fromStateId === null) {
-                                $rootExists = $workflow->transitions()->whereNull('from_state_id')->exists();
-                                if ($rootExists) {
-                                    $fail('Only one root transition is allowed.');
-                                }
-                            }
+                                        if ($fromStateId === null) {
+                                            $rootExists = $workflow->transitions()->whereNull('from_state_id')->exists();
+                                            if ($rootExists) {
+                                                $fail('Only one root transition is allowed.');
+                                            }
+                                        }
 
-                            $exists = $workflow->transitions()
-                                ->where('from_state_id', $fromStateId)
-                                ->where('to_state_id', $toStateId)
-                                ->exists();
+                                        $exists = $workflow->transitions()
+                                            ->where('from_state_id', $fromStateId)
+                                            ->where('to_state_id', $toStateId)
+                                            ->where('id', '!=', $record?->id)
+                                            ->exists();
 
-                            if ($exists) {
-                                $fail('This transition already exists.');
-                            }
-                        },
-                    ]),
+                                        if ($exists) {
+                                            $fail('This transition already exists.');
+                                        }
+                                    },
+                                ]),
+                        ]),
 
-                Repeater::make('conditions')
-                    ->label('Conditions')
-                    ->schema($this->conditionSchema($modelClass))
-                    ->columns(2)
-                    ->collapsible()
-                    ->itemLabel(fn (array $state) => ($state['field'] ?? '') . ' ' . ($state['operator'] ?? '') . ' ' . ($state['value'] ?? ''))
-                    ->addActionLabel('Add condition')
-                    ->hint('When set, this transition is only allowed when all (or any, per group) conditions pass on the record.'),
+                    Step::make('Conditions')
+                        ->label('Conditions')
+                        ->description('Optionally add conditions for this transition')
+                        ->schema([
+                            Repeater::make('conditions')
+                                ->label('Conditions')
+                                ->schema($this->conditionSchema($modelClass))
+                                ->columns(2)
+                                ->collapsible()
+                                ->itemLabel(fn(array $state) => ($state['field'] ?? '') . ' ' . ($state['operator'] ?? '') . ' ' . ($state['value'] ?? ''))
+                                ->addActionLabel('Add condition'),
+                        ]),
+                ]),
             ])->columns(1);
+    }
+
+    /**
+     * Sync conditions for a transition: update existing by index, create new, delete removed.
+     *
+     * @param  array<int, array<string, mixed>>  $conditionsData
+     */
+    protected function syncTransitionConditions(WorkflowTransition $transition, array $conditionsData): void
+    {
+        $existing = $transition->conditions()->orderBy('order')->get()->values();
+        $keepIds = [];
+
+        foreach ($conditionsData as $i => $condition) {
+            $payload = array_merge(
+                Arr::only($condition, ['field', 'operator', 'value', 'value_type', 'logical_group', 'base_field']),
+                ['order' => $i]
+            );
+            if ($existing->has($i)) {
+                $existing[$i]->update($payload);
+                $keepIds[] = $existing[$i]->id;
+            } else {
+                $new = $transition->conditions()->create($payload);
+                $keepIds[] = $new->id;
+            }
+        }
+
+        $transition->conditions()->whereNotIn('id', $keepIds)->delete();
     }
 
     /**
@@ -176,31 +248,40 @@ class ManageWorkflowTransitions extends ManageRelatedRecords
             Select::make('field')
                 ->required()
                 ->label('Field')
-                ->options(fn () => Helper::getFillableFieldsForModel($modelClass))
+                ->options(fn() => Helper::getFillableFieldsForModel($modelClass))
                 ->searchable(),
             Select::make('operator')
                 ->required()
                 ->label('Operator')
                 ->options([
-                    '>' => '>', '<' => '<', '>=' => '>=', '<=' => '<=',
-                    '=' => '=', '!=' => '!=', 'in' => 'in',
+                    '>' => '>',
+                    '<' => '<',
+                    '>=' => '>=',
+                    '<=' => '<=',
+                    '=' => '=',
+                    '!=' => '!=',
+                    'in' => 'in',
                 ]),
             TextInput::make('value')
                 ->required()
                 ->label('Value'),
             Select::make('value_type')
+                ->live()
                 ->default('static')
                 ->label('Value Type')
                 ->options(['static' => 'Static', 'percentage' => 'Percentage']),
             Select::make('logical_group')
                 ->default('AND')
                 ->label('Logical Group')
-                ->options(['AND' => 'AND', 'OR' => 'OR']),
+                ->options(['AND' => 'AND', 'OR' => 'OR'])
+                ->columnSpanFull()
+                ->hint('How this condition combines with the previous result (AND / OR). Ignored for the first condition.'),
             Select::make('base_field')
                 ->label('Base Field (for percentage)')
-                ->options(fn () => Helper::getFillableFieldsForModel($modelClass))
+                ->options(fn() => Helper::getFillableFieldsForModel($modelClass))
                 ->searchable()
-                ->visible(fn ($get) => $get('value_type') === 'percentage'),
+                ->columnSpanFull()
+                ->visible(fn($get) => $get('value_type') === 'percentage'),
         ];
     }
 }

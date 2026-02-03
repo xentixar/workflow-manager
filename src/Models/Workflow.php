@@ -33,12 +33,4 @@ class Workflow extends Model
     {
         return $this->hasMany(WorkflowTransition::class);
     }
-
-    /**
-     * Get the rules for the workflow.
-     */
-    public function rules(): HasMany
-    {
-        return $this->hasMany(WorkflowRule::class);
-    }
 }
