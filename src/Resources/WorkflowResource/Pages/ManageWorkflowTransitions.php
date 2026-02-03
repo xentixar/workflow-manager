@@ -261,27 +261,35 @@ class ManageWorkflowTransitions extends ManageRelatedRecords
                     '=' => '=',
                     '!=' => '!=',
                     'in' => 'in',
+                    'like' => 'Like (% and _ wildcards)',
+                    'regex' => 'Regex',
                 ]),
             TextInput::make('value')
-                ->required()
-                ->label('Value'),
+                ->label('Value')
+                ->required(fn($get) => $get('value_type') === 'static')
+                ->visible(fn($get) => $get('value_type') === 'static'),
             Select::make('value_type')
                 ->live()
                 ->default('static')
                 ->label('Value Type')
-                ->options(['static' => 'Static', 'percentage' => 'Percentage']),
+                ->options([
+                    'static' => 'Static (literal value)',
+                    'dynamic' => 'Dynamic (compare with another column/relation)',
+                ]),
+            Select::make('base_field')
+                ->label('Compare with column/relation')
+                ->options(fn() => Helper::getFillableFieldsForModel($modelClass))
+                ->searchable()
+                ->required(fn($get) => $get('value_type') === 'dynamic')
+                ->columnSpanFull()
+                ->visible(fn($get) => $get('value_type') === 'dynamic')
+                ->hint('Dot notation supported (e.g. user.department).'),
             Select::make('logical_group')
                 ->default('AND')
                 ->label('Logical Group')
                 ->options(['AND' => 'AND', 'OR' => 'OR'])
                 ->columnSpanFull()
                 ->hint('How this condition combines with the previous result (AND / OR). Ignored for the first condition.'),
-            Select::make('base_field')
-                ->label('Base Field (for percentage)')
-                ->options(fn() => Helper::getFillableFieldsForModel($modelClass))
-                ->searchable()
-                ->columnSpanFull()
-                ->visible(fn($get) => $get('value_type') === 'percentage'),
         ];
     }
 }

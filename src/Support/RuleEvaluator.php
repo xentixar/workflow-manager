@@ -2,7 +2,10 @@
 
 namespace Xentixar\WorkflowManager\Support;
 
+use Carbon\Carbon;
+use DateTimeInterface;
 use Illuminate\Database\Eloquent\Model;
+use Throwable;
 use Xentixar\WorkflowManager\Models\Workflow;
 use Xentixar\WorkflowManager\Models\WorkflowRuleCondition;
 use Xentixar\WorkflowManager\Models\WorkflowState;
@@ -105,21 +108,50 @@ final class RuleEvaluator
     {
         $fieldValue = self::getFieldValue($record, $condition->field);
 
+        $operator = $condition->operator;
+
+        if ($operator === 'in') {
+            $compareValue = $condition->value_type === 'dynamic'
+                ? self::resolveDynamicValueForIn($condition, $record)
+                : $condition->value;
+            if ($condition->value_type === 'dynamic' && trim((string) $compareValue) === '') {
+                return false;
+            }
+            return self::compareIn($fieldValue, $compareValue);
+        }
+
+        if ($operator === 'like' || $operator === 'regex') {
+            $pattern = $condition->value_type === 'static'
+                ? ($condition->value ?? '')
+                : (filled($condition->base_field) ? self::getFieldValue($record, $condition->base_field) : null);
+            if ($pattern === null || (is_string($pattern) && trim($pattern) === '')) {
+                return false;
+            }
+            return $operator === 'like'
+                ? self::compareLike($fieldValue, (string) $pattern)
+                : self::compareRegex($fieldValue, (string) $pattern);
+        }
+
         $compareValue = self::resolveCompareValue($condition, $record);
-        if ($compareValue === null && $condition->value_type !== 'static') {
+        if ($condition->value_type === 'dynamic') {
+            if ($compareValue === null || (is_string($compareValue) && trim($compareValue) === '')) {
+                return false;
+            }
+        } elseif ($compareValue === null) {
             return false;
         }
 
-        $operator = $condition->operator;
+        if ($operator === '=' || $operator === '!=') {
+            $a = self::normalizeForEquality($fieldValue);
+            $b = self::normalizeForEquality($compareValue);
+            return $operator === '=' ? ($a == $b) : ($a != $b);
+        }
 
         return match ($operator) {
             '>' => self::compare($fieldValue, $compareValue, fn ($a, $b) => $a > $b),
             '<' => self::compare($fieldValue, $compareValue, fn ($a, $b) => $a < $b),
             '>=' => self::compare($fieldValue, $compareValue, fn ($a, $b) => $a >= $b),
             '<=' => self::compare($fieldValue, $compareValue, fn ($a, $b) => $a <= $b),
-            '=' => self::compare($fieldValue, $compareValue, fn ($a, $b) => $a == $b),
-            '!=' => self::compare($fieldValue, $compareValue, fn ($a, $b) => $a != $b),
-            'in' => self::compareIn($fieldValue, $condition->value),
             default => false,
         };
     }
@@ -133,8 +165,8 @@ final class RuleEvaluator
     }
 
     /**
-     * Resolve the value to compare against (static or percentage of base field).
-     * Base field supports dot notation.
+     * Resolve the value to compare against: static (literal) or dynamic (another column/relation).
+     * Base field supports dot notation (e.g. user.department).
      */
     private static function resolveCompareValue(WorkflowRuleCondition $condition, Model $record): mixed
     {
@@ -142,16 +174,26 @@ final class RuleEvaluator
             return self::castValue($condition->value, self::getFieldValue($record, $condition->field));
         }
 
-        if ($condition->value_type === 'percentage') {
-            $baseField = $condition->base_field ?? $condition->field;
-            $baseValue = self::getFieldValue($record, $baseField);
-            if ($baseValue === null || ! is_numeric($baseValue) || ! is_numeric($condition->value)) {
-                return null;
-            }
-            return (float) $baseValue * ((float) $condition->value / 100);
+        if ($condition->value_type === 'dynamic' && filled($condition->base_field)) {
+            return self::getFieldValue($record, $condition->base_field);
         }
 
         return $condition->value;
+    }
+
+    /**
+     * For 'in' operator with dynamic: value list from another column (comma-separated string or array).
+     */
+    private static function resolveDynamicValueForIn(WorkflowRuleCondition $condition, Model $record): string
+    {
+        if (blank($condition->base_field)) {
+            return $condition->value ?? '';
+        }
+        $v = self::getFieldValue($record, $condition->base_field);
+        if (is_array($v)) {
+            return implode(',', $v);
+        }
+        return (string) $v;
     }
 
     /**
@@ -165,7 +207,19 @@ final class RuleEvaluator
         if (is_bool($fieldValue)) {
             return filter_var($value, FILTER_VALIDATE_BOOLEAN);
         }
+        if ($fieldValue instanceof DateTimeInterface || self::looksLikeDate($value)) {
+            try {
+                return Carbon::parse($value);
+            } catch (Throwable) {
+                return $value;
+            }
+        }
         return $value;
+    }
+
+    private static function looksLikeDate(string $value): bool
+    {
+        return (bool) preg_match('/^\d{4}-\d{2}-\d{2}/', $value);
     }
 
     private static function compare(mixed $fieldValue, mixed $compareValue, callable $op): bool
@@ -176,9 +230,36 @@ final class RuleEvaluator
         if ($fieldValue === null || $compareValue === null) {
             return false;
         }
+        $a = $fieldValue;
+        $b = $compareValue;
+        $aIsDate = $a instanceof DateTimeInterface || (is_string($a) && self::looksLikeDate($a));
+        $bIsDate = $b instanceof DateTimeInterface || (is_string($b) && self::looksLikeDate((string) $b));
+        if ($aIsDate || $bIsDate) {
+            try {
+                $a = $a instanceof DateTimeInterface ? $a : \Carbon\Carbon::parse($fieldValue);
+                $b = $b instanceof DateTimeInterface ? $b : \Carbon\Carbon::parse($compareValue);
+                return $op($a->getTimestamp(), $b->getTimestamp());
+            } catch (\Throwable) {
+                // fall through to default comparison
+            }
+        }
         $a = is_numeric($fieldValue) ? (float) $fieldValue : $fieldValue;
         $b = is_numeric($compareValue) ? (float) $compareValue : $compareValue;
         return $op($a, $b);
+    }
+
+    private static function normalizeForEquality(mixed $value): string|float|int
+    {
+        if (is_numeric($value)) {
+            return is_float($value) || (is_string($value) && str_contains((string) $value, '.')) ? (float) $value : (int) $value;
+        }
+        if ($value instanceof \BackedEnum) {
+            return $value->value;
+        }
+        if ($value instanceof \UnitEnum) {
+            return $value->name;
+        }
+        return (string) $value;
     }
 
     private static function compareIn(mixed $fieldValue, string $valueList): bool
@@ -186,5 +267,37 @@ final class RuleEvaluator
         $allowed = array_map('trim', explode(',', $valueList));
         return in_array((string) $fieldValue, $allowed, true)
             || in_array($fieldValue, $allowed, false);
+    }
+
+    /**
+     * Like: SQL-style pattern. % = any sequence, _ = single character.
+     * Case-insensitive; leading/trailing whitespace in subject and pattern is trimmed.
+     */
+    private static function compareLike(mixed $fieldValue, string $pattern): bool
+    {
+        $subject = trim((string) $fieldValue);
+        $pattern = trim($pattern);
+        if ($pattern === '') {
+            return false;
+        }
+        $pattern = str_replace(['%', '_'], ["\x02", "\x03"], $pattern);
+        $pattern = preg_quote($pattern, '#');
+        $pattern = str_replace(["\x02", "\x03"], ['.*', '.'], $pattern);
+        return (bool) preg_match('#^' . $pattern . '\z#ui', $subject);
+    }
+
+    /**
+     * Regex: value is a PCRE pattern. Matches if field value matches the pattern.
+     */
+    private static function compareRegex(mixed $fieldValue, string $pattern): bool
+    {
+        $subject = (string) $fieldValue;
+        $delimiter = '#';
+        if (str_contains($pattern, $delimiter)) {
+            $delimiter = '~';
+        }
+        $regex = $delimiter . $pattern . $delimiter . 'u';
+        $result = @preg_match($regex, $subject);
+        return $result === 1;
     }
 }

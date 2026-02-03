@@ -3,11 +3,26 @@
     $includeParent = config('workflow-manager.include_parent', false);
 
     $conditionLine = function ($c) {
-        $line = $c->field . ' ' . $c->operator . ' ' . $c->value;
-        if ($c->value_type === 'percentage') {
-            $line .= '%' . ($c->base_field ? ' of ' . $c->base_field : '');
-        }
-        return $line;
+        $field = str_replace('_', ' ', $c->field);
+        $valueType = $c->value_type ?? 'static';
+        $valuePart = ($valueType === 'dynamic' && filled($c->base_field))
+            ? 'value of ' . str_replace('_', ' ', $c->base_field)
+            : $c->value;
+
+        $operatorPhrase = match ($c->operator) {
+            '=' => 'is equal to',
+            '!=' => 'is not equal to',
+            '>' => 'is greater than',
+            '<' => 'is less than',
+            '>=' => 'is greater than or equal to',
+            '<=' => 'is less than or equal to',
+            'in' => 'is one of',
+            'like' => 'matches pattern',
+            'regex' => 'matches regex',
+            default => $c->operator,
+        };
+
+        return $field . ' ' . $operatorPhrase . ' ' . $valuePart;
     };
 
     $nodes = [];
@@ -53,16 +68,17 @@
                         'source' => $prevKey,
                         'target' => $condKey,
                         'edgeLabel' => $edgeLabel,
+                        'hasConditions' => true,
                     ];
                     $prevKey = $condKey;
                 }
-                $edges[] = ['source' => $prevKey, 'target' => $toKey, 'edgeLabel' => null];
+                $edges[] = ['source' => $prevKey, 'target' => $toKey, 'edgeLabel' => null, 'hasConditions' => true];
             } else {
-                $edges[] = ['source' => $fromKey, 'target' => $toKey, 'edgeLabel' => null];
+                $edges[] = ['source' => $fromKey, 'target' => $toKey, 'edgeLabel' => null, 'hasConditions' => false];
             }
 
             if ($includeParent) {
-                $edges[] = ['source' => $toKey, 'target' => $fromKey, 'reverse' => true, 'edgeLabel' => null];
+                $edges[] = ['source' => $toKey, 'target' => $fromKey, 'reverse' => true, 'edgeLabel' => null, 'hasConditions' => false];
             }
         } else {
             $startId = 'start';
@@ -70,7 +86,7 @@
                 $seenStates[$startId] = true;
                 $nodes[] = ['id' => $startId, 'label' => 'Start', 'type' => 'start'];
             }
-            $edges[] = ['source' => $startId, 'target' => $toKey, 'edgeLabel' => null];
+            $edges[] = ['source' => $startId, 'target' => $toKey, 'edgeLabel' => null, 'hasConditions' => false];
         }
     }
 

@@ -207,10 +207,32 @@ class StateSelect extends Select
             return true;
         }
 
-        if ($record && config('workflow-manager.rules_enabled', true) && $workflow->rules()->where('is_active', true)->exists()) {
-            $ruleAllowedToStates = RuleEvaluator::getAllowedToStates($workflow, $record, $currentStateValue);
-            if ($ruleAllowedToStates !== []) {
-                return ! in_array($value, $ruleAllowedToStates, true);
+        if ($record && config('workflow-manager.rules_enabled', true)) {
+            $transitionsWithConditionsFromCurrent = WorkflowTransition::query()
+                ->where('workflow_id', $workflow->id)
+                ->where('from_state_id', $currentState->id)
+                ->whereHas('conditions')
+                ->with('toState')
+                ->get();
+
+            if ($transitionsWithConditionsFromCurrent->isNotEmpty()) {
+                if ($value === $currentStateValue) {
+                    return false;
+                }
+
+                $ruleAllowedToStates = RuleEvaluator::getAllowedToStates($workflow, $record, $currentStateValue);
+                $targetStateValuesWithConditions = $transitionsWithConditionsFromCurrent
+                    ->map(fn ($t) => $t->toState?->state)
+                    ->filter()
+                    ->unique()
+                    ->values()
+                    ->all();
+
+                if ($ruleAllowedToStates !== []) {
+                    return ! in_array($value, $ruleAllowedToStates, true);
+                }
+
+                return in_array($value, $targetStateValuesWithConditions, true);
             }
         }
 
