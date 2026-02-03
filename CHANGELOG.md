@@ -2,6 +2,31 @@
 
 All notable changes to the Workflow Manager package will be documented in this file.
 
+## [Unreleased] - 2025-02-03
+
+### Added
+- **Filament v5 support**: Package supports Filament 5.0+ (`filament/support` ^5.0).
+- **Transition conditions**: Conditions are defined per transition (no global rules). Add multiple conditions with AND/OR logical groups; order is preserved via an `order` column.
+- **Value types**: **Static** (literal value) and **Dynamic** (compare with another column/relation, e.g. `description` is not equal to value of `status`). Dynamic conditions show as "value of {field}" in the diagram.
+- **Operators**: Full set of comparison operators: `=`, `!=`, `>`, `<`, `>=`, `<=`, `in`, **like** (SQL-style `%` and `_` wildcards, case-insensitive), and **regex** (PCRE pattern).
+- **Wizard form**: Create/edit transition uses a two-step wizard (Transition → Conditions) to reduce clutter.
+- **Edit conditions action**: Table action to edit only the conditions for a transition without opening the full edit form.
+- **Condition sync**: Editing conditions updates existing rows in place (no full delete/recreate), preserving order and IDs.
+
+### Changed
+- **Workflow diagram**: Switched from Mermaid.js to **Cytoscape.js** for the workflow diagram. White background, **breadthfirst** layout (deterministic, flowchart-style from Start), straight edges. **Direct** transitions use a **solid** line; transitions **with conditions** use a **dashed** line. Condition nodes use a **diamond** shape with fixed width/height/padding.
+- **Condition labels in diagram**: Plain English phrases (e.g. "is equal to", "is not equal to", "is one of", "matches pattern"). Dynamic comparisons show "value of {field}".
+- **StateSelect**: Selecting the **current state** (self) is always allowed. When all conditions fail for a transition, the target state is now correctly **disabled** (previously allowed when `getAllowedToStates` returned empty). Replaced removed `rules()` with `transitions()->whereHas('conditions')`.
+- **RuleEvaluator**: Date/datetime comparison supported. Like operator: case-insensitive, trim. Dynamic conditions: when the base field value is null or blank, the condition fails and the state is disabled in StateSelect.
+- **Equality comparison**: For `=` and `!=`, values are normalized (enum → value, string, number) so that enum and string with the same value (e.g. `Status::Pending` and `"pending"`) compare correctly; StateSelect now disables options when conditions like "description not equal to value of status" correctly fail.
+
+### Fixed
+- **StateSelect**: "In progress" (or other target state) no longer selectable when a transition has conditions that fail (e.g. AND with one false condition). Empty allowed list now disables target states that have conditions.
+- **StateSelect**: Fixed "Call to undefined method Workflow::rules()" after removal of global rules; uses transitions with conditions instead.
+- **Condition ordering**: Explicit `order` column and ordered relation so condition evaluation order is stable.
+
+---
+
 ## v2.0.0 - 2025-10-14
 
 ### Breaking Changes

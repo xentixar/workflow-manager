@@ -10,7 +10,8 @@ Workflow Manager provides a simple yet flexible way to define and manage workflo
 
 - Define workflow states for your models using PHP enums
 - Configure transitions between states with validation
-- Visualize workflows with interactive Mermaid.js diagrams
+- Add **per-transition conditions** (static/dynamic, AND/OR) to gate transitions (e.g. “title matches pattern”, “description not equal to value of status”)
+- Visualize workflows with Cytoscape.js flowcharts (deterministic, solid/dashed edges, condition diamonds)
 - Control access to state transitions based on user roles
 - Add workflow management to any Laravel model
 - Support for role-based workflow management
@@ -22,7 +23,7 @@ Workflow Manager provides a simple yet flexible way to define and manage workflo
 
 ✨ **PHP Enum Integration** - Leverage PHP 8.1+ enums for type-safe state management
 
-🎨 **Interactive Diagrams** - Visualize workflows with auto-generated Mermaid.js flowcharts showing forward and reverse transitions
+🎨 **Interactive Diagrams** - Visualize workflows with Cytoscape.js flowcharts (deterministic, flowchart-style). Solid lines for direct transitions, dashed for conditional paths; condition nodes shown as diamonds
 
 👥 **Role-Based Workflows** - Create different workflow rules for different user roles (admin, user, etc.)
 
@@ -42,7 +43,7 @@ Workflow Manager provides a simple yet flexible way to define and manage workflo
 
 - PHP 8.1 or higher
 - Laravel 11.0 or higher
-- Filament 4.0 or higher
+- Filament 5.0 or higher
 
 ## Installation
 
@@ -281,12 +282,20 @@ When defining state transitions in the admin panel, you can specify:
 1. **From State**: The starting state for the transition (parent state)
 2. **To State**: The destination state for the transition (child state)
 3. **Workflow Context**: Each transition belongs to a specific workflow and role
+4. **Conditions** (optional): Per-transition conditions that must pass for the transition to be allowed. Conditions use AND/OR logical groups and support:
+   - **Static** – compare field to a literal value
+   - **Dynamic** – compare field to another column/relation (e.g. “description is not equal to value of status”)
+   - **Operators**: `=`, `!=`, `>`, `<`, `>=`, `<=`, `in`, **like** (SQL-style `%`/`_`), **regex**
 
 The package automatically validates transitions based on your defined rules:
 - Users can only transition to states that have been explicitly defined as valid transitions
+- **Transition conditions** are evaluated when rules are enabled; if any condition fails (e.g. AND with one false), that target state is disabled in the state select
+- Selecting the **current state** (self) is always allowed
 - If `include_parent` is enabled in configuration, users can also transition back to previous states (reverse transitions)
 - During ignored actions (like 'create' by default), all states are available regardless of workflow rules
 - You can customize ignored actions per form using `setIgnoredActions()` method
+
+**Manage Transitions**: The transition form uses a **wizard** (Step 1: Transition, Step 2: Conditions). You can also use the **Edit conditions** action on a transition row to edit only its conditions.
 
 ## Visualizing Workflows
 
@@ -302,14 +311,15 @@ The admin interface automatically detects models that implement the `WorkflowsCo
 
 ### Interactive Workflow Diagrams
 
-Workflow Manager includes built-in visualization of your workflows using Mermaid.js diagrams. Each workflow displays an interactive flowchart showing:
+Workflow Manager visualizes workflows using **Cytoscape.js** with a deterministic, flowchart-style layout (breadthfirst from Start). Each workflow diagram shows:
 
-- **States**: All defined states in your workflow
-- **Forward Transitions**: Solid arrows (`-->`) showing allowed state transitions
-- **Reverse Transitions**: Dotted arrows (`-.->`) showing backward transitions (when `include_parent` is enabled)
-- **Start Node**: Visual indicator of workflow entry points
+- **States**: Blue rounded rectangles for workflow states
+- **Start**: Green ellipse for the workflow entry point
+- **Conditions**: Orange diamond nodes when a transition has conditions (plain-English labels, e.g. “title matches pattern %hello%”, “description is not equal to value of status”)
+- **Edges**: **Solid** lines for direct transitions (no conditions); **dashed** lines for transitions that have conditions (and for reverse transitions when `include_parent` is enabled)
+- **AND/OR**: Shown on edges between condition nodes when multiple conditions apply
 
-The diagrams are automatically generated based on your workflow configuration and update dynamically as you modify transitions. This provides a clear visual representation of your workflow logic, making it easier to understand and maintain complex state machines.
+The diagram is stable (same layout every time) and updates when you change transitions or conditions.
 
 ## Advanced Usage
 
@@ -367,19 +377,11 @@ The package is designed to work seamlessly with PHP enums, providing type safety
 The package includes a powerful visualization component that renders your workflows as interactive diagrams:
 
 **Diagram Features:**
-- **Automatic Generation**: Diagrams are generated automatically from your workflow configuration
-- **Visual State Representation**: Each state is displayed as a node with its label
-- **Transition Arrows**: Solid arrows show forward transitions, dotted arrows show reverse transitions
-- **Real-time Updates**: Diagrams update immediately when you modify workflow transitions
-- **Mermaid.js Integration**: Uses Mermaid.js for clean, professional diagram rendering
-
-The diagram clearly shows:
-```
-Draft --> Under Review --> Approved --> Published
-  ^          ^              ^
-  |          |              |
-  '----------'--------------' (if include_parent is enabled)
-```
+- **Cytoscape.js**: Flowchart-style layout (top-down from Start), deterministic
+- **Visual States**: States as blue nodes, Start as green ellipse, conditions as orange diamonds
+- **Edge Styling**: Solid = direct transition; dashed = conditional or reverse transition
+- **Condition Labels**: Plain English (e.g. “is equal to”, “value of status” for dynamic)
+- **Real-time Updates**: Diagram reflects workflow and condition changes
 
 ### Integrating with Permissions
 
@@ -463,7 +465,7 @@ public static function form(Form $form): Form
 5. **Invalid transitions**: Check that you have defined the appropriate transitions in the workflow admin interface.
 6. **Component not found**: Make sure you're importing `StateSelect` from the correct namespace: `Xentixar\WorkflowManager\Forms\Components\StateSelect`.
 7. **All states available during edit**: This is expected behavior if 'edit' is not in your `ignored_actions` configuration. Add it if you want workflow validation during edits.
-8. **Diagram not rendering**: Ensure Mermaid.js is properly loaded. The package includes it automatically in the Filament admin panel.
+8. **Diagram not rendering**: Ensure Cytoscape.js and workflow-manager assets are loaded. The package registers them via the service provider.
 9. **Reverse transitions not showing**: Check that `include_parent` is set to `true` in your `config/workflow-manager.php` file.
 10. **Workflow validation bypassed**: Verify that the current action is not in the `ignored_actions` list, either globally or per-component.
 
