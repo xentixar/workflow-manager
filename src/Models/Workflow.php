@@ -29,8 +29,16 @@ class Workflow extends Model
     /**
      * Get the transitions for the workflow.
      */
-    public function transitions():HasMany
+    public function transitions(): HasMany
     {
         return $this->hasMany(WorkflowTransition::class);
+    }
+
+    /**
+     * Get the rules for the workflow.
+     */
+    public function rules(): HasMany
+    {
+        return $this->hasMany(WorkflowRule::class);
     }
 }

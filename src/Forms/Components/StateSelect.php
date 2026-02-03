@@ -13,6 +13,7 @@ use Xentixar\WorkflowManager\Models\Workflow;
 use Xentixar\WorkflowManager\Models\WorkflowTransition;
 use Xentixar\WorkflowManager\Models\WorkflowState;
 use Xentixar\WorkflowManager\Support\Helper;
+use Xentixar\WorkflowManager\Support\RuleEvaluator;
 
 class StateSelect extends Select
 {
@@ -47,7 +48,7 @@ class StateSelect extends Select
                     $currentState = $currentState->value; // @phpstan-ignore-line
                 }
 
-                return self::shouldDisableOption($value, $currentState, $workflowModel, $role);
+                return self::shouldDisableOption($value, $currentState, $workflowModel, $role, $record);
             }, true);
     }
 
@@ -112,8 +113,8 @@ class StateSelect extends Select
 
             $enabledOptions = array_filter(
                 $options,
-                function ($label, $value) use ($workflowModel, $role, $currentState) {
-                    $workflowDisabled = self::shouldDisableOption($value, $currentState, $workflowModel, $role);
+                function ($label, $value) use ($workflowModel, $role, $currentState, $record) {
+                    $workflowDisabled = self::shouldDisableOption($value, $currentState, $workflowModel, $role, $record);
 
                     return ! ($workflowDisabled);
                 },
@@ -149,9 +150,12 @@ class StateSelect extends Select
         return $workflow?->states->pluck('label', 'state')->toArray() ?? $defaultStates;
     }
 
-    private static function shouldDisableOption(string $value, string $currentState, ?string $model, ?string $role): bool
+    /**
+     * @param  class-string|null  $model
+     */
+    private static function shouldDisableOption(string $value, string $currentStateValue, ?string $model, ?string $role, ?Model $record = null): bool
     {
-        if (! $currentState || ! $model || ! $role) {
+        if (! $currentStateValue || ! $model || ! $role) {
             return false;
         }
 
@@ -168,7 +172,7 @@ class StateSelect extends Select
 
         $currentState = WorkflowState::query()
             ->where('workflow_id', $workflow->id)
-            ->where('state', $currentState)
+            ->where('state', $currentStateValue)
             ->first();
 
         if (! $currentState) {
@@ -199,7 +203,18 @@ class StateSelect extends Select
             ->where('state', $value)
             ->first();
 
-        return ! $targetState || ! in_array($targetState->id, $acceptedStateIds);
+        if (! $targetState || ! in_array($targetState->id, $acceptedStateIds)) {
+            return true;
+        }
+
+        if ($record && config('workflow-manager.rules_enabled', true) && $workflow->rules()->where('is_active', true)->exists()) {
+            $ruleAllowedToStates = RuleEvaluator::getAllowedToStates($workflow, $record, $currentStateValue);
+            if ($ruleAllowedToStates !== []) {
+                return ! in_array($value, $ruleAllowedToStates, true);
+            }
+        }
+
+        return false;
     }
 
     public function setIgnoredActions(array $actions, bool $override = false): static

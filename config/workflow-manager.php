@@ -72,4 +72,14 @@ return [
     'ignored_actions' => [
         'create',
     ],
+
+    /**
+     * --------------------------------------------------------------------------
+     * Rules (Business rules & conditional routing)
+     * --------------------------------------------------------------------------
+     * When true, the optional rules layer is enabled. Workflows can define rules
+     * that evaluate model data to filter or suggest the next allowed transition.
+     * When false, rule evaluation is skipped and behavior is unchanged.
+     */
+    'rules_enabled' => true,
 ];
